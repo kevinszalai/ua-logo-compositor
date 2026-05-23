@@ -390,6 +390,11 @@ footer{
 #error-banner .err-text b{display:block;font-weight:600;margin-bottom:2px;}
 #error-banner .err-retry{margin-left:auto;padding:6px 12px;border-radius:7px;border:1.5px solid #ffc107;background:transparent;font-family:'Poppins',sans-serif;font-size:11px;font-weight:600;color:#664d03;cursor:pointer;white-space:nowrap;transition:background .15s;}
 #error-banner .err-retry:hover{background:#ffc107;}
+
+/* ── DRAG EN ADMIN CANVAS ── */
+#admin-canvas{cursor:grab;}
+#admin-canvas.dragging{cursor:grabbing;}
+.drag-hint{font-size:10px;color:var(--muted);text-align:center;margin-top:6px;opacity:.7;}
 </style>
 </head>
 <body>
@@ -540,6 +545,7 @@ footer{
           <div class="canvas-outer">
             <canvas id="admin-canvas"></canvas>
           </div>
+          <div class="drag-hint">Arrastrá el recuadro azul para reposicionar el logo</div>
           <div class="sidebar">
             <div class="card">
               <div class="card-label">Flyer base</div>
@@ -1266,6 +1272,76 @@ function closeSuccess() {
   setStep(1);
 }
 window.closeSuccess = closeSuccess;
+
+
+// ── DRAG EN ADMIN CANVAS ───────────────────────────────────────
+(function() {
+  let isDragging = false;
+  let dragStartX = 0, dragStartY = 0;
+  let origPx = 0, origPy = 0;
+
+  function getCanvasPos(e, canvas) {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width  / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
+  }
+
+  function isOverLogo(pos, canvas) {
+    if (!flyerImg) return false;
+    const W = canvas.width, H = canvas.height;
+    const lx = W * cfg.px, ly = H * cfg.py;
+    const pad = 20;
+    return pos.x >= lx - pad && pos.x <= lx + cfg.lw + pad &&
+           pos.y >= ly - pad && pos.y <= ly + cfg.lh + pad;
+  }
+
+  function startDrag(e) {
+    if (!adminUnlocked || !flyerImg) return;
+    const canvas = document.getElementById('admin-canvas');
+    if (e.target !== canvas) return;
+    const pos = getCanvasPos(e, canvas);
+    if (!isOverLogo(pos, canvas)) return;
+    e.preventDefault();
+    isDragging = true;
+    dragStartX = pos.x; dragStartY = pos.y;
+    origPx = cfg.px;    origPy = cfg.py;
+    canvas.classList.add('dragging');
+  }
+
+  function onDrag(e) {
+    if (!isDragging || !flyerImg) return;
+    e.preventDefault();
+    const canvas = document.getElementById('admin-canvas');
+    const pos = getCanvasPos(e, canvas);
+    const W = canvas.width, H = canvas.height;
+    const dx = pos.x - dragStartX, dy = pos.y - dragStartY;
+    cfg.px = Math.min(Math.max(origPx + dx / W, 0), (W - cfg.lw) / W);
+    cfg.py = Math.min(Math.max(origPy + dy / H, 0), (H - cfg.lh) / H);
+    document.getElementById('sx').value = Math.round(cfg.px * 100);
+    document.getElementById('sy').value = Math.round(cfg.py * 100);
+    document.getElementById('vx').textContent = Math.round(cfg.px * 100) + '%';
+    document.getElementById('vy').textContent = Math.round(cfg.py * 100) + '%';
+    renderAdmin();
+    if (logoImg) renderPreview();
+  }
+
+  function endDrag() {
+    if (!isDragging) return;
+    isDragging = false;
+    const canvas = document.getElementById('admin-canvas');
+    if (canvas) canvas.classList.remove('dragging');
+  }
+
+  document.addEventListener('mousedown', startDrag);
+  document.addEventListener('mousemove', onDrag);
+  document.addEventListener('mouseup',   endDrag);
+  document.addEventListener('touchstart', startDrag, { passive: false });
+  document.addEventListener('touchmove',  onDrag,    { passive: false });
+  document.addEventListener('touchend',   endDrag);
+})();
 
 // HELPERS
 function setupDrop(zid,iid,cb){
