@@ -996,22 +996,25 @@ document.getElementById('flyer-input').addEventListener('change', function() {
   if (flyers.length >= 3) { alert('Máximo 3 flyers activos. Eliminá uno antes de agregar otro.'); return; }
   const fr = new FileReader();
   fr.onload = e => {
-    const dataUrl = e.target.result;
+    const rawDataUrl = e.target.result;
     const name = f.name.replace(/\.[^.]+$/, '').slice(0, 30);
-    const newFlyer = { b64: dataUrl, name, px: 0.880, py: 0.844, lw: 250, lh: 150 };
-    flyers.push(newFlyer);
-    adminFlyerIdx = flyers.length - 1;
-    cfg = { px: 0.880, py: 0.844, lw: 250, lh: 150 };
-    syncSlidersFromCfg();
-    loadImgFromSrc(dataUrl, img => {
-      flyerImg = img;
-      renderAdmin();
-      if (logoImg) renderPreview();
+    // Comprimir antes de guardar en Firestore (max 900px, calidad 0.75)
+    compressImage(rawDataUrl, 900, 0.75, dataUrl => {
+      const newFlyer = { b64: dataUrl, name, px: 0.880, py: 0.844, lw: 250, lh: 150 };
+      flyers.push(newFlyer);
+      adminFlyerIdx = flyers.length - 1;
+      cfg = { px: 0.880, py: 0.844, lw: 250, lh: 150 };
+      syncSlidersFromCfg();
+      loadImgFromSrc(dataUrl, img => {
+        flyerImg = img;
+        renderAdmin();
+        if (logoImg) renderPreview();
+      });
+      document.getElementById('flyer-ok').style.display = 'block';
+      document.getElementById('flyer-fname').textContent = f.name;
+      renderFlyersGrid();
+      renderFlyerSelector();
     });
-    document.getElementById('flyer-ok').style.display = 'block';
-    document.getElementById('flyer-fname').textContent = f.name;
-    renderFlyersGrid();
-    renderFlyerSelector();
     this.value = '';
   };
   fr.readAsDataURL(f);
@@ -1407,6 +1410,22 @@ window.closeSuccess = closeSuccess;
 
 
 
+
+// ── COMPRIMIR IMAGEN ANTES DE GUARDAR ────────────────────────
+function compressImage(dataUrl, maxW, quality, cb) {
+  const img = new Image();
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    let w = img.width, h = img.height;
+    if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, w, h);
+    cb(canvas.toDataURL('image/jpeg', quality));
+  };
+  img.src = dataUrl;
+}
+
 // ── MULTI-FLYER ───────────────────────────────────────────────
 // Structure in Firestore config/main:
 // flyers: [ { b64, name, px, py, lw, lh }, ... ]
@@ -1509,20 +1528,21 @@ window._replaceFlyer = function(idx, input) {
   const f = input.files[0]; if (!f) return;
   const fr = new FileReader();
   fr.onload = e => {
-    const dataUrl = e.target.result;
-    flyers[idx].b64 = dataUrl;
-    // Update canvas if this is the one being edited
-    if (idx === adminFlyerIdx) {
-      loadImgFromSrc(dataUrl, img => {
-        flyerImg = img;
-        renderAdmin();
-        if (logoImg) renderPreview();
-      });
-    }
-    renderFlyersGrid();
-    renderFlyerSelector();
-    document.getElementById('flyer-ok').style.display = 'block';
-    document.getElementById('flyer-fname').textContent = f.name;
+    const rawDataUrl = e.target.result;
+    compressImage(rawDataUrl, 900, 0.75, dataUrl => {
+      flyers[idx].b64 = dataUrl;
+      if (idx === adminFlyerIdx) {
+        loadImgFromSrc(dataUrl, img => {
+          flyerImg = img;
+          renderAdmin();
+          if (logoImg) renderPreview();
+        });
+      }
+      renderFlyersGrid();
+      renderFlyerSelector();
+      document.getElementById('flyer-ok').style.display = 'block';
+      document.getElementById('flyer-fname').textContent = f.name;
+    });
   };
   fr.readAsDataURL(f);
 };
