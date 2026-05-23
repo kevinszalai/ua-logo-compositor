@@ -1282,15 +1282,21 @@ function closeSuccess() {
   const ov = document.getElementById('success-overlay');
   ov.classList.remove('show');
   setTimeout(() => { ov.style.display = 'none'; }, 300);
-  // Reset for new download
+  // Reset logo pero mantener el flyer visible
   logoImg = null;
   document.getElementById('logo-ok').style.display = 'none';
   document.getElementById('val-box').style.display = 'none';
-  document.getElementById('preview-canvas').style.display = 'none';
-  document.getElementById('ph-loading').style.display = 'none';
-  document.getElementById('ph-user').style.display = 'flex';
-  document.getElementById('btn-dl').disabled = true;
   document.getElementById('logo-input').value = '';
+  document.getElementById('btn-dl').disabled = true;
+  // Si el flyer sigue cargado, mostrarlo con el recuadro vacío
+  if (flyerImg) {
+    document.getElementById('ph-loading').style.display = 'none';
+    document.getElementById('ph-user').style.display = 'none';
+    showFlyerPreview();
+  } else {
+    document.getElementById('ph-loading').style.display = 'none';
+    document.getElementById('ph-user').style.display = 'flex';
+  }
   setStep(1);
 }
 window.closeSuccess = closeSuccess;
