@@ -260,12 +260,12 @@ async function init() {
       cfg = { px: data.px ?? cfg.px, py: data.py ?? cfg.py, lw: data.lw ?? cfg.lw, lh: data.lh ?? cfg.lh };
       syncSlidersFromCfg();
       if (data.flyerUrl) {
-        loadImgFromSrc(data.flyerUrl, img => { flyerImg = img; });
+        loadImgFromSrc(data.flyerUrl, img => { flyerImg = img; showFlyerPreview(); });
         return;
       }
     }
   } catch(e) { console.warn('Firebase no conectado, usando flyer local:', e); }
-  loadImgFromSrc(FLYER_FALLBACK, img => { flyerImg = img; });
+  loadImgFromSrc(FLYER_FALLBACK, img => { flyerImg = img; showFlyerPreview(); });
 }
 init();
 
@@ -431,6 +431,14 @@ document.getElementById('btn-dl').addEventListener('click', () => {
 });
 
 // ── RENDER ────────────────────────────────────────────────────
+function showFlyerPreview() {
+  if (!flyerImg) return;
+  const cv = document.getElementById('preview-canvas');
+  document.getElementById('ph-user').style.display = 'none';
+  cv.style.display = 'block';
+  drawComposite(cv, flyerImg, null, cfg);
+}
+
 function renderPreview() {
   if (!flyerImg) return;
   const cv = document.getElementById('preview-canvas');
