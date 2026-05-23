@@ -1476,25 +1476,22 @@ function renderFlyersGrid() {
     const isMain    = i === 0;
     const isEditing = i === adminFlyerIdx;
     return '<div class="flyer-item' + (isEditing ? ' active-flyer' : '') + '">'
-      // Thumbnail con botón de reemplazar imagen
-      + '<div class="fi-replace" title="Clic para reemplazar imagen">'
-      + '<img src="' + f.b64 + '" alt="flyer" style="width:48px;height:32px;object-fit:cover;border-radius:5px;border:1px solid var(--border);display:block"/>'
-      + '<input type="file" accept="image/*" onchange="window._replaceFlyer(' + i + ', this)"/>'
-      + '</div>'
-      // Nombre editable
-      + '<div class="fi-info">'
+      // Nombre editable — ocupa todo el espacio disponible
+      + '<div class="fi-info" style="flex:1;min-width:0">'
       + '<input class="fi-name-input" value="' + (f.name || 'Flyer ' + (i+1)) + '" '
       + 'onchange="window._renameFlyer(' + i + ', this.value)" '
       + 'onblur="window._renameFlyer(' + i + ', this.value)" '
       + 'placeholder="Nombre del flyer"/>'
-      + (isMain ? '<div class="fi-main">★ Principal</div>' : '')
+      + (isMain ? '<div class="fi-main">★ Principal</div>' : (isEditing ? '<div class="fi-main" style="color:var(--ua-blue)">✓ Editando</div>' : ''))
       + '</div>'
-      // Acciones
-      + '<div class="flyer-item-actions">'
-      + '<button class="fi-btn' + (isEditing ? ' fi-btn-main' : '') + '" onclick="window._editFlyer(' + i + ')">'
-      + (isEditing ? '✓ Editando' : 'Editar') + '</button>'
-      + (!isMain ? '<button class="fi-btn" onclick="window._setMainFlyer(' + i + ')">Principal</button>' : '')
-      + (flyers.length > 1 ? '<button class="fi-btn fi-btn-del" onclick="window._deleteFlyer(' + i + ')">✕</button>' : '')
+      // Acciones — iconos compactos
+      + '<div class="flyer-item-actions" style="flex-shrink:0;gap:4px">'
+      + '<button class="fi-btn" onclick="window._editFlyer(' + i + ')" title="Editar posición">' + (isEditing ? '✓' : '✎') + '</button>'
+      + '<button class="fi-btn fi-replace-btn" title="Reemplazar imagen" style="position:relative;overflow:hidden">'
+      + '🖼<input type="file" accept="image/*" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%" onchange="window._replaceFlyer(' + i + ', this)"/>'
+      + '</button>'
+      + (!isMain ? '<button class="fi-btn" onclick="window._setMainFlyer(' + i + ')" title="Marcar como principal">★</button>' : '')
+      + (flyers.length > 1 ? '<button class="fi-btn fi-btn-del" onclick="window._deleteFlyer(' + i + ')" title="Eliminar">✕</button>' : '')
       + '</div>'
       + '</div>';
   }).join('');
