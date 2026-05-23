@@ -406,6 +406,53 @@ footer{
   border-top-color:var(--ua-blue);border-radius:50%;
   animation:spin .7s linear infinite;
 }
+
+/* ── SELECTOR DE FLYERS (usuario) ── */
+.flyer-selector{display:flex;gap:10px;margin-bottom:1rem;flex-wrap:wrap;}
+.flyer-thumb{
+  position:relative;cursor:pointer;border-radius:10px;overflow:hidden;
+  border:2px solid var(--border);transition:all .2s;flex:1;min-width:80px;max-width:140px;
+}
+.flyer-thumb:hover{border-color:var(--ua-blue);}
+.flyer-thumb.active{border-color:var(--ua-cyan);box-shadow:0 0 0 3px rgba(0,196,223,.2);}
+.flyer-thumb img{width:100%;height:60px;object-fit:cover;display:block;}
+.flyer-thumb .ft-label{
+  font-size:10px;font-weight:600;text-align:center;padding:4px 6px;
+  background:var(--surface);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.flyer-thumb .ft-badge{
+  position:absolute;top:4px;left:4px;
+  background:var(--ua-blue);color:#fff;
+  font-size:9px;font-weight:700;padding:2px 5px;border-radius:4px;
+}
+.flyer-thumb.active .ft-label{color:var(--ua-blue);}
+
+/* ── GESTIÓN DE FLYERS (admin) ── */
+.flyers-grid{display:flex;flex-direction:column;gap:10px;margin-top:4px;}
+.flyer-item{
+  display:flex;align-items:center;gap:10px;
+  padding:8px 10px;background:var(--bg);
+  border-radius:10px;border:1.5px solid var(--border);transition:border-color .15s;
+}
+.flyer-item.active-flyer{border-color:var(--ua-cyan);background:var(--ua-cyan-lt);}
+.flyer-item img{width:48px;height:32px;object-fit:cover;border-radius:5px;flex-shrink:0;border:1px solid var(--border);}
+.flyer-item .fi-info{flex:1;min-width:0;}
+.flyer-item .fi-name{font-size:11px;font-weight:600;color:var(--ua-dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.flyer-item .fi-main{font-size:10px;color:var(--ua-teal);font-weight:600;}
+.flyer-item-actions{display:flex;gap:5px;flex-shrink:0;}
+.fi-btn{padding:4px 9px;border-radius:6px;font-size:10px;font-weight:600;font-family:'Poppins',sans-serif;cursor:pointer;border:1.5px solid var(--border2);background:var(--surface);color:var(--muted);transition:all .15s;}
+.fi-btn:hover{border-color:var(--ua-blue);color:var(--ua-blue);}
+.fi-btn.fi-btn-main{background:var(--ua-blue);color:#fff;border-color:var(--ua-blue);}
+.fi-btn.fi-btn-del{border-color:var(--red-bg);color:var(--red);}
+.fi-btn.fi-btn-del:hover{background:var(--red-bg);}
+.fi-add{
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  padding:8px;border-radius:10px;border:1.5px dashed var(--border2);
+  background:var(--bg);font-size:11px;color:var(--muted);cursor:pointer;
+  transition:all .15s;
+}
+.fi-add:hover{border-color:var(--ua-blue);color:var(--ua-blue);}
+.fi-add input{position:absolute;opacity:0;pointer-events:none;}
 </style>
 </head>
 <body>
@@ -480,16 +527,19 @@ footer{
       </div>
     </div>
     <div class="layout">
-      <div class="canvas-outer">
-        <div class="canvas-loading" id="ph-loading">
-          <div class="canvas-spinner"></div>
-          <span>Cargando flyer...</span>
+      <div>
+        <div class="flyer-selector" id="flyer-selector"></div>
+        <div class="canvas-outer">
+          <div class="canvas-loading" id="ph-loading">
+            <div class="canvas-spinner"></div>
+            <span>Cargando flyer...</span>
+          </div>
+          <div class="ph" id="ph-user" style="display:none">
+            <div class="ph-icon">🖼️</div>
+            <p>Subí tu logo para ver<br>la vista previa en tiempo real</p>
+          </div>
+          <canvas id="preview-canvas"></canvas>
         </div>
-        <div class="ph" id="ph-user" style="display:none">
-          <div class="ph-icon">🖼️</div>
-          <p>Subí tu logo para ver<br>la vista previa en tiempo real</p>
-        </div>
-        <canvas id="preview-canvas"></canvas>
       </div>
       <div class="sidebar">
         <div class="card">
@@ -565,13 +615,13 @@ footer{
           </div>
           <div class="sidebar">
             <div class="card">
-              <div class="card-label">Flyer base</div>
-              <div class="drop" id="flyer-drop">
-                <input type="file" id="flyer-input" accept="image/*"/>
-                <div class="drop-ico">↑</div>
-                <p>Subir nuevo flyer base<br>JPG o PNG</p>
+              <div class="card-label">Flyers activos</div>
+              <div class="flyers-grid" id="flyers-grid"></div>
+              <div class="fi-add" id="fi-add-btn" style="margin-top:8px;position:relative">
+                <input type="file" id="flyer-input" accept="image/*" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%"/>
+                <span style="font-size:14px">+</span> Agregar flyer
               </div>
-              <div class="file-ok" id="flyer-ok">✓ <span id="flyer-fname"></span></div>
+              <div class="file-ok" id="flyer-ok" style="display:none">✓ <span id="flyer-fname"></span></div>
             </div>
             <div class="card">
               <div class="card-label">Posición del logo</div>
@@ -720,13 +770,18 @@ async function init() {
       if (data.pin) currentPin = data.pin;
       syncSlidersFromCfg();
       if (data.history) renderHistory(data.history);
-      if (data.flyerB64) {
-        // Tenemos flyer y config de Firebase — mostrar directo
-        loadImgFromSrc(data.flyerB64, img => {
+      loadFlyersFromData(data);
+      if (flyers.length) {
+        const f = getActiveFlyer();
+        cfg = { px: f.px, py: f.py, lw: f.lw, lh: f.lh };
+        syncSlidersFromCfg();
+        loadImgFromSrc(f.b64, img => {
           flyerImg = img;
           showFlyerPreview();
           if (logoImg) renderPreview();
           hideErrorBanner();
+          renderFlyerSelector();
+          if (adminUnlocked) renderFlyersGrid();
         });
         return;
       }
@@ -824,6 +879,7 @@ function tryUnlock() {
     lock.style.opacity = '0';
     setTimeout(() => lock.style.display = 'none', 260);
     if (flyerImg) renderAdmin();
+    renderFlyersGrid();
     loadResults();
   } else {
     document.getElementById('pin-error').textContent = 'Código incorrecto. Intentá de nuevo.';
@@ -918,12 +974,32 @@ setupDrop('logo-drop', 'logo-input', (f, img) => {
   setStep(2);
 });
 
-setupDrop('flyer-drop', 'flyer-input', (f, img) => {
-  pendingFlyerDataUrl = null; flyerImg = img;
-  const fr = new FileReader(); fr.onload = e => { pendingFlyerDataUrl = e.target.result; }; fr.readAsDataURL(f);
-  document.getElementById('flyer-ok').style.display = 'block';
-  document.getElementById('flyer-fname').textContent = f.name;
-  renderAdmin(); if (logoImg) renderPreview();
+// New flyer upload — adds to array (max 3)
+document.getElementById('flyer-input').addEventListener('change', function() {
+  const f = this.files[0]; if (!f) return;
+  if (flyers.length >= 3) { alert('Máximo 3 flyers activos. Eliminá uno antes de agregar otro.'); return; }
+  readImg(f, img => {
+    const fr = new FileReader();
+    fr.onload = e => {
+      const name = f.name.replace(/\.[^.]+$/, '').slice(0, 30);
+      // Defaults predeterminados para cada flyer nuevo
+      const newFlyer = { b64: e.target.result, name,
+        px: 0.880, py: 0.844, lw: 250, lh: 150 };
+      // Sync sliders to defaults
+      cfg = { px: 0.880, py: 0.844, lw: 250, lh: 150 };
+      syncSlidersFromCfg();
+      flyers.push(newFlyer);
+      adminFlyerIdx = flyers.length - 1;
+      flyerImg = img;
+      document.getElementById('flyer-ok').style.display = 'block';
+      document.getElementById('flyer-fname').textContent = f.name;
+      renderAdmin();
+      renderFlyersGrid();
+      renderFlyerSelector();
+      if (logoImg) renderPreview();
+    };
+    fr.readAsDataURL(f);
+  });
 });
 
 // SLIDERS
@@ -952,6 +1028,19 @@ document.getElementById('btn-save').addEventListener('click', async () => {
     } else {
       if (existing.flyerB64) saveData.flyerB64 = existing.flyerB64;
       if (existing.history) saveData.history = existing.history;
+    }
+    // Update current admin flyer config in flyers array
+    if (flyers.length > 0) {
+      flyers[adminFlyerIdx].px = cfg.px;
+      flyers[adminFlyerIdx].py = cfg.py;
+      flyers[adminFlyerIdx].lw = cfg.lw;
+      flyers[adminFlyerIdx].lh = cfg.lh;
+      if (pendingFlyerDataUrl) {
+        flyers[adminFlyerIdx].b64 = pendingFlyerDataUrl;
+        pendingFlyerDataUrl = null;
+      }
+      saveData.flyers = flyers;
+      saveData.activeFlyer = 0;
     }
     await setDoc(doc(db, 'config', 'main'), saveData);
     btn.innerHTML = '✓ Publicado'; status.style.color = 'var(--green)';
@@ -1301,6 +1390,127 @@ function closeSuccess() {
 }
 window.closeSuccess = closeSuccess;
 
+
+
+// ── MULTI-FLYER ───────────────────────────────────────────────
+// Structure in Firestore config/main:
+// flyers: [ { b64, name, px, py, lw, lh }, ... ]
+// activeFlyer: 0  (index of main flyer)
+
+let flyers = [];          // array of { b64, name, px, py, lw, lh }
+let activeFlyerIdx = 0;   // which flyer is selected by user
+let adminFlyerIdx  = 0;   // which flyer admin is editing
+
+function loadFlyersFromData(data) {
+  if (data.flyers && data.flyers.length) {
+    flyers = data.flyers;
+    activeFlyerIdx = data.activeFlyer ?? 0;
+    adminFlyerIdx  = data.activeFlyer ?? 0;
+  } else if (data.flyerB64) {
+    // Migrate legacy single flyer
+    flyers = [{ b64: data.flyerB64, name: 'Flyer principal',
+                px: data.px ?? 0.88, py: data.py ?? 0.844,
+                lw: data.lw ?? 250,  lh: data.lh ?? 150 }];
+    activeFlyerIdx = 0; adminFlyerIdx = 0;
+  }
+}
+
+function getActiveFlyer() { return flyers[activeFlyerIdx] || flyers[0]; }
+function getAdminFlyer()  { return flyers[adminFlyerIdx]  || flyers[0]; }
+
+function selectUserFlyer(idx) {
+  activeFlyerIdx = idx;
+  const f = getActiveFlyer();
+  cfg = { px: f.px, py: f.py, lw: f.lw, lh: f.lh };
+  syncSlidersFromCfg();
+  loadImgFromSrc(f.b64, img => { flyerImg = img; if (logoImg) renderPreview(); else showFlyerPreview(); });
+  renderFlyerSelector();
+}
+
+function selectAdminFlyer(idx) {
+  adminFlyerIdx = idx;
+  const f = getAdminFlyer();
+  cfg = { px: f.px, py: f.py, lw: f.lw, lh: f.lh };
+  syncSlidersFromCfg();
+  loadImgFromSrc(f.b64, img => { flyerImg = img; renderAdmin(); });
+  renderFlyersGrid();
+}
+
+function renderFlyerSelector() {
+  const sel = document.getElementById('flyer-selector');
+  if (!sel || flyers.length <= 1) { if(sel) sel.innerHTML=''; return; }
+  sel.innerHTML = flyers.map((f, i) => {
+    const isActive = i === activeFlyerIdx;
+    const isMain   = i === 0;
+    return '<div class="flyer-thumb' + (isActive?' active':'') + '" onclick="window._selectUserFlyer(' + i + ')">'
+      + (isMain ? '<div class="ft-badge">Principal</div>' : '')
+      + '<img src="' + f.b64 + '" alt="flyer"/>'
+      + '<div class="ft-label">' + (f.name || 'Flyer ' + (i+1)) + '</div>'
+      + '</div>';
+  }).join('');
+}
+
+function renderFlyersGrid() {
+  const grid = document.getElementById('flyers-grid');
+  if (!grid) return;
+  if (!flyers.length) { grid.innerHTML = '<div style="font-size:11px;color:var(--hint);padding:8px 0">Sin flyers todavía</div>'; return; }
+  grid.innerHTML = flyers.map((f, i) => {
+    const isMain = i === 0;
+    const isEditing = i === adminFlyerIdx;
+    return '<div class="flyer-item' + (isEditing?' active-flyer':'') + '">'
+      + '<img src="' + f.b64 + '" alt="flyer"/>'
+      + '<div class="fi-info">'
+      + '<div class="fi-name">' + (f.name || 'Flyer ' + (i+1)) + '</div>'
+      + (isMain ? '<div class="fi-main">★ Principal</div>' : '')
+      + '</div>'
+      + '<div class="flyer-item-actions">'
+      + '<button class="fi-btn" onclick="window._editFlyer(' + i + ')">Editar</button>'
+      + (!isMain ? '<button class="fi-btn fi-btn-main" onclick="window._setMainFlyer(' + i + ')">Principal</button>' : '')
+      + (flyers.length > 1 ? '<button class="fi-btn fi-btn-del" onclick="window._deleteFlyer(' + i + ')">✕</button>' : '')
+      + '</div>'
+      + '</div>';
+  }).join('');
+}
+
+window._selectUserFlyer = selectUserFlyer;
+window._editFlyer = function(idx) { selectAdminFlyer(idx); };
+window._setMainFlyer = async function(idx) {
+  // Move idx to position 0
+  const moved = [...flyers];
+  const [item] = moved.splice(idx, 1);
+  moved.unshift(item);
+  flyers = moved;
+  adminFlyerIdx = 0; activeFlyerIdx = 0;
+  await saveFlyersToFirebase();
+  renderFlyersGrid();
+  renderFlyerSelector();
+};
+window._deleteFlyer = async function(idx) {
+  if (!confirm('¿Eliminar este flyer?')) return;
+  flyers.splice(idx, 1);
+  if (adminFlyerIdx >= flyers.length) adminFlyerIdx = flyers.length - 1;
+  if (activeFlyerIdx >= flyers.length) activeFlyerIdx = 0;
+  await saveFlyersToFirebase();
+  renderFlyersGrid();
+  renderFlyerSelector();
+  selectAdminFlyer(adminFlyerIdx);
+};
+
+async function saveFlyersToFirebase() {
+  try {
+    const snap = await getDoc(doc(db, 'config', 'main'));
+    const existing = snap.exists() ? snap.data() : {};
+    await setDoc(doc(db, 'config', 'main'), {
+      ...existing,
+      flyers,
+      activeFlyer: 0,
+      // keep legacy fields in sync with first flyer
+      flyerB64: flyers[0]?.b64,
+      px: flyers[0]?.px, py: flyers[0]?.py,
+      lw: flyers[0]?.lw, lh: flyers[0]?.lh,
+    });
+  } catch(e) { console.warn('Error guardando flyers:', e); }
+}
 
 // ── DRAG EN ADMIN CANVAS ───────────────────────────────────────
 (function() {
