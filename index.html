@@ -212,6 +212,22 @@ footer{
 .step.done + .step-line, .step-line.done{background:var(--ua-teal);}
 @keyframes stepPop{0%{transform:scale(.8);opacity:0}60%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}
 .step.active .step-bubble, .step.done .step-bubble{animation:stepPop .35s ease;}
+
+/* ── VALIDATION CHECKLIST ── */
+.val-box{margin-top:10px;display:flex;flex-direction:column;gap:6px;}
+.val-item{display:flex;align-items:center;gap:8px;font-size:11px;padding:6px 10px;border-radius:8px;transition:all .3s ease;background:var(--bg);border:1.5px solid var(--border);}
+.val-item.ok{background:var(--green-bg);border-color:#a8dfc4;color:var(--green);}
+.val-item.fail{background:var(--red-bg);border-color:#f5b8c0;color:var(--red);}
+.val-item.pending{color:var(--hint);}
+.val-icon{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;transition:all .3s ease;}
+.val-item.ok .val-icon{background:var(--green);color:#fff;}
+.val-item.fail .val-icon{background:var(--red);color:#fff;}
+.val-item.pending .val-icon{background:var(--border2);color:#fff;}
+.val-text{flex:1;line-height:1.4;}
+.val-text b{display:block;font-weight:600;}
+.val-text span{font-size:10px;opacity:.8;}
+@keyframes valPop{0%{transform:scale(.95);opacity:0}100%{transform:scale(1);opacity:1}}
+.val-item.ok,.val-item.fail{animation:valPop .25s ease;}
 </style>
 </head>
 <body>
@@ -259,7 +275,7 @@ footer{
   <section id="panel-user" class="panel active">
     <div class="panel-head">
       <h1>Agregá tu logo al flyer</h1>
-      <p>Subí tu logo y lo posicionamos automáticamente. Descargá el resultado listo para usar.</p>
+      <p>Subí tu logo, previsualizá el resultado y descargalo listo para usar.</p>
     </div>
     <div class="stepper" id="stepper">
       <div class="step active" id="step-1">
@@ -304,8 +320,21 @@ footer{
             <div class="drop-ico">↑</div>
             <p>Arrastrá o hacé clic para subir</p>
           </div>
-          <div class="file-ok" id="logo-ok">✓ <span id="logo-fname"></span></div>
-          <div class="file-err" id="logo-err"></div>
+          <div class="file-ok" id="logo-ok" style="display:none">✓ <span id="logo-fname"></span></div>
+          <div class="val-box" id="val-box" style="display:none">
+            <div class="val-item pending" id="val-format">
+              <div class="val-icon">?</div>
+              <div class="val-text"><b>Formato del archivo</b><span>Debe ser PNG o JPG</span></div>
+            </div>
+            <div class="val-item pending" id="val-size">
+              <div class="val-icon">?</div>
+              <div class="val-text"><b>Tamaño exacto</b><span id="val-size-detail">Debe ser 250 × 150 px</span></div>
+            </div>
+            <div class="val-item pending" id="val-bg">
+              <div class="val-icon">?</div>
+              <div class="val-text"><b>Fondo del logo</b><span>Debe ser blanco o transparente</span></div>
+            </div>
+          </div>
         </div>
         <div class="card">
           <button class="btn btn-primary" id="btn-dl" disabled>↓ Descargar flyer</button>
@@ -570,14 +599,36 @@ document.getElementById('btn-back-admin').addEventListener('click', () => {
 
 // VALIDACIÓN LOGO
 function validateLogo(file, img) {
-  const errors = [];
-  if (!['image/png','image/jpeg','image/jpg'].includes(file.type))
-    errors.push('El archivo debe ser PNG o JPG.');
-  if (img.naturalWidth !== LOGO_W || img.naturalHeight !== LOGO_H)
-    errors.push('El tamaño debe ser exactamente ' + LOGO_W + ' × ' + LOGO_H + ' px. El tuyo es ' + img.naturalWidth + ' × ' + img.naturalHeight + ' px.');
-  if (!hasValidBackground(img))
-    errors.push('El fondo debe ser blanco o transparente.');
-  return errors;
+  return {
+    format: ['image/png','image/jpeg','image/jpg'].includes(file.type),
+    size:   img.naturalWidth === LOGO_W && img.naturalHeight === LOGO_H,
+    bg:     hasValidBackground(img),
+    w:      img.naturalWidth,
+    h:      img.naturalHeight,
+  };
+}
+
+function updateChecklist(result) {
+  const box = document.getElementById('val-box');
+  box.style.display = 'flex';
+
+  function setItem(id, ok, detail) {
+    const el = document.getElementById(id);
+    el.className = 'val-item ' + (ok ? 'ok' : 'fail');
+    el.querySelector('.val-icon').textContent = ok ? '✓' : '✕';
+    if (detail) el.querySelector('span').textContent = detail;
+  }
+
+  setItem('val-format', result.format);
+  setItem('val-size',   result.size,
+    result.size
+      ? 'Perfecto: 250 × 150 px'
+      : 'Tu logo es ' + result.w + ' × ' + result.h + ' px — necesita ser 250 × 150 px');
+  setItem('val-bg', result.bg);
+}
+
+function hideChecklist() {
+  document.getElementById('val-box').style.display = 'none';
 }
 
 function hasValidBackground(img) {
@@ -592,18 +643,29 @@ function hasValidBackground(img) {
 
 // DROPS
 setupDrop('logo-drop', 'logo-input', (f, img) => {
-  const errs = validateLogo(f, img);
-  const errEl = document.getElementById('logo-err'), okEl = document.getElementById('logo-ok');
-  if (errs.length) {
-    errEl.innerHTML = '✕ ' + errs.join('<br>· '); errEl.style.display = 'block'; okEl.style.display = 'none';
-    logoImg = null; document.getElementById('btn-dl').disabled = true;
+  const result = validateLogo(f, img);
+  const okEl = document.getElementById('logo-ok');
+  const allOk = result.format && result.size && result.bg;
+
+  updateChecklist(result);
+
+  if (!allOk) {
+    okEl.style.display = 'none';
+    logoImg = null;
+    document.getElementById('btn-dl').disabled = true;
     document.getElementById('preview-canvas').style.display = 'none';
     document.getElementById('ph-user').style.display = 'flex';
-    setStep(1); return;
+    setStep(1);
+    return;
   }
-  errEl.style.display = 'none'; okEl.style.display = 'block';
+
+  // Todo OK
+  hideChecklist();
+  okEl.style.display = 'block';
   document.getElementById('logo-fname').textContent = f.name;
-  logoImg = img; renderPreview(); document.getElementById('btn-dl').disabled = false;
+  logoImg = img;
+  renderPreview();
+  document.getElementById('btn-dl').disabled = false;
   setStep(2);
 });
 
