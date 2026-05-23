@@ -395,6 +395,17 @@ footer{
 #admin-canvas{cursor:grab;}
 #admin-canvas.dragging{cursor:grabbing;}
 .drag-hint{font-size:10px;color:var(--muted);text-align:center;margin-top:6px;opacity:.7;}
+
+/* ── LOADING FLYER ── */
+.canvas-loading{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:10px;color:var(--hint);font-size:12px;padding:3rem 2rem;
+}
+.canvas-spinner{
+  width:32px;height:32px;border:3px solid var(--border2);
+  border-top-color:var(--ua-blue);border-radius:50%;
+  animation:spin .7s linear infinite;
+}
 </style>
 </head>
 <body>
@@ -470,7 +481,11 @@ footer{
     </div>
     <div class="layout">
       <div class="canvas-outer">
-        <div class="ph" id="ph-user">
+        <div class="canvas-loading" id="ph-loading">
+          <div class="canvas-spinner"></div>
+          <span>Cargando flyer...</span>
+        </div>
+        <div class="ph" id="ph-user" style="display:none">
           <div class="ph-icon">🖼️</div>
           <p>Subí tu logo para ver<br>la vista previa en tiempo real</p>
         </div>
@@ -542,10 +557,12 @@ footer{
           <p>Cambiá el flyer base y ajustá la posición del logo. Los cambios se publican para todos al instante.</p>
         </div>
         <div class="layout">
-          <div class="canvas-outer">
-            <canvas id="admin-canvas"></canvas>
+          <div>
+            <div class="canvas-outer">
+              <canvas id="admin-canvas"></canvas>
+            </div>
+            <div class="drag-hint">Arrastrá el recuadro azul para reposicionar el logo</div>
           </div>
-          <div class="drag-hint">Arrastrá el recuadro azul para reposicionar el logo</div>
           <div class="sidebar">
             <div class="card">
               <div class="card-label">Flyer base</div>
@@ -694,13 +711,7 @@ let pendingFlyerDataUrl = null;
 let currentPin = '4896';
 
 async function init() {
-  // Mostrar flyer de respaldo inmediatamente — no esperar Firebase
-  loadImgFromSrc(FLYER_FALLBACK, img => {
-    flyerImg = img;
-    showFlyerPreview();
-  });
-
-  // Luego intentar cargar config y flyer desde Firebase en segundo plano
+  // Primero intentar Firebase — config + flyer
   try {
     const snap = await getDoc(doc(db, 'config', 'main'));
     if (snap.exists()) {
@@ -710,16 +721,24 @@ async function init() {
       syncSlidersFromCfg();
       if (data.history) renderHistory(data.history);
       if (data.flyerB64) {
+        // Tenemos flyer y config de Firebase — mostrar directo
         loadImgFromSrc(data.flyerB64, img => {
           flyerImg = img;
           showFlyerPreview();
-          // Si hay logo cargado, actualizar la preview también
           if (logoImg) renderPreview();
           hideErrorBanner();
         });
+        return;
       }
     }
   } catch(e) { console.warn('Firebase no disponible, usando flyer local:', e); }
+
+  // Fallback: Firebase no respondió o no hay flyer guardado
+  loadImgFromSrc(FLYER_FALLBACK, img => {
+    flyerImg = img;
+    showFlyerPreview();
+    hideErrorBanner();
+  }, showErrorBanner);
 }
 
 function showErrorBanner() {
@@ -965,12 +984,14 @@ document.getElementById('btn-dl').addEventListener('click', async () => {
 // RENDER
 function showFlyerPreview() {
   if (!flyerImg) return;
+  document.getElementById('ph-loading').style.display = 'none';
   document.getElementById('ph-user').style.display = 'none';
   const cv = document.getElementById('preview-canvas'); cv.style.display = 'block';
   drawComposite(cv, flyerImg, null, cfg);
 }
 function renderPreview() {
   if (!flyerImg) return;
+  document.getElementById('ph-loading').style.display = 'none';
   document.getElementById('ph-user').style.display = 'none';
   const cv = document.getElementById('preview-canvas'); cv.style.display = 'block';
   drawComposite(cv, flyerImg, logoImg, cfg);
@@ -1266,6 +1287,7 @@ function closeSuccess() {
   document.getElementById('logo-ok').style.display = 'none';
   document.getElementById('val-box').style.display = 'none';
   document.getElementById('preview-canvas').style.display = 'none';
+  document.getElementById('ph-loading').style.display = 'none';
   document.getElementById('ph-user').style.display = 'flex';
   document.getElementById('btn-dl').disabled = true;
   document.getElementById('logo-input').value = '';
