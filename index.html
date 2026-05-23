@@ -70,6 +70,8 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .pin-error{font-size:12px;color:var(--red);min-height:16px;margin-bottom:.75rem}
 .btn-unlock{background:var(--accent);color:#fff;border:none;border-radius:var(--r);padding:11px;width:100%;font-family:'Poppins',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:opacity .15s}
 .btn-unlock:hover{opacity:.85}
+.btn-back{background:transparent;color:var(--muted);border:none;font-family:'Poppins',sans-serif;font-size:12px;cursor:pointer;margin-top:10px;padding:6px;width:100%;transition:color .15s}
+.btn-back:hover{color:var(--text)}
 /* MODAL USUARIO */
 body.modal-open{overflow:hidden}
 body.modal-open header,body.modal-open main,body.modal-open .ua-bar,body.modal-open footer{filter:blur(4px);pointer-events:none;user-select:none}
@@ -220,6 +222,7 @@ footer{text-align:center;font-size:11px;color:var(--hint);padding:2rem;border-to
           </div>
           <p class="pin-error" id="pin-error"></p>
           <button class="btn-unlock" id="btn-unlock">Ingresar</button>
+          <button class="btn-back" id="btn-back-admin">← Volver al inicio</button>
         </div>
       </div>
       <div id="admin-content">
@@ -446,6 +449,18 @@ function tryUnlock() {
     }, 2000);
   }
 }
+
+// ── BOTÓN VOLVER ──────────────────────────────────────────────
+document.getElementById('btn-back-admin').addEventListener('click', () => {
+  // Volver a panel usuario
+  document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
+  document.querySelector('.tab[data-tab="user"]').classList.add('active');
+  document.getElementById('panel-user').classList.add('active');
+  // Limpiar dígitos del PIN
+  digits.forEach(d => { d.value = ''; d.style.borderColor = ''; });
+  document.getElementById('pin-error').textContent = '';
+});
 
 // ── VALIDACIÓN LOGO ────────────────────────────────────────────
 function validateLogo(file, img) {
