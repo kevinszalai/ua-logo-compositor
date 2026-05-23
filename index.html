@@ -71,8 +71,8 @@
     .status-msg{font-size:11px;color:var(--muted);text-align:center;margin-top:8px;min-height:16px}
 
     /* ADMIN LOCK */
-    .admin-panel-wrap{position:relative;min-height:100px}
-    #admin-lock{position:fixed;inset:0;z-index:30;background:rgba(247,246,242,0.97);display:flex;align-items:center;justify-content:center}
+    .admin-panel-wrap{position:relative;min-height:500px}
+    #admin-lock{position:absolute;inset:0;z-index:10;background:var(--bg);display:flex;align-items:center;justify-content:center;border-radius:var(--rlg)}
     .lock-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rlg);padding:2.5rem 2rem;width:100%;max-width:320px;text-align:center}
     .lock-card h2{font-size:1.05rem;font-weight:600;letter-spacing:-.02em;margin-bottom:.3rem}
     .lock-sub{font-size:12px;color:var(--muted);margin-bottom:1.5rem;line-height:1.5}
@@ -82,20 +82,6 @@
     .pin-error{font-size:12px;color:var(--red);min-height:16px;margin-bottom:.75rem}
     .btn-unlock{background:var(--accent);color:#fff;border:none;border-radius:var(--r);padding:11px;width:100%;font-family:'Poppins',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:opacity .15s}
     .btn-unlock:hover{opacity:.85}
-
-    /* MODAL DATOS USUARIO */
-    body.modal-open{overflow:hidden}
-    body.modal-open header,body.modal-open main,body.modal-open .ua-bar,body.modal-open footer{filter:blur(4px);pointer-events:none;user-select:none}
-    #user-modal{position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:50;display:flex;align-items:center;justify-content:center}
-    .modal-card{background:var(--surface);border-radius:var(--rlg);padding:2.5rem 2rem;width:100%;max-width:360px;box-shadow:0 8px 32px rgba(0,0,0,0.18)}
-    .modal-card h2{font-size:1.1rem;font-weight:600;letter-spacing:-.02em;margin-bottom:.3rem}
-    .modal-sub{font-size:12px;color:var(--muted);margin-bottom:1.5rem;line-height:1.6}
-    .modal-form{display:flex;flex-direction:column;gap:12px;margin-bottom:1.25rem}
-    .modal-field{display:flex;flex-direction:column;gap:4px}
-    .modal-field label{font-size:10px;font-weight:600;color:var(--hint);letter-spacing:.07em;text-transform:uppercase}
-    .modal-input{width:100%;padding:9px 12px;border:1px solid var(--border2);border-radius:var(--r);font-family:'Poppins',sans-serif;font-size:13px;background:var(--surface);color:var(--text);outline:none;transition:border-color .15s}
-    .modal-input:focus{border-color:var(--accent)}
-    .modal-err{font-size:11px;color:var(--red);min-height:14px}
 
     /* FORMULARIO USUARIO */
     .user-form{display:flex;flex-direction:column;gap:8px}
@@ -145,26 +131,6 @@
 </head>
 <body>
 
-<!-- MODAL DATOS USUARIO -->
-<div id="user-modal" style="display:none">
-  <div class="modal-card">
-    <h2>Bienvenido al Creador de cobranding</h2>
-    <p class="modal-sub">Ingresá tus datos para acceder. Los guardamos para que no tengas que completarlos de nuevo.</p>
-    <div class="modal-form">
-      <div class="modal-field">
-        <label>Nombre completo</label>
-        <input class="modal-input" id="user-name" type="text" placeholder="Juan García" maxlength="80"/>
-      </div>
-      <div class="modal-field">
-        <label>Email</label>
-        <input class="modal-input" id="user-email" type="email" placeholder="juan@empresa.com" maxlength="100"/>
-      </div>
-    </div>
-    <p class="modal-err" id="modal-err"></p>
-    <button class="btn btn-primary" id="btn-modal-enter" style="margin-top:0">Ingresar</button>
-  </div>
-</div>
-
 <!-- UA Brand bar -->
 <div class="ua-bar">
   <div class="ua-bar-inner">
@@ -206,9 +172,23 @@
             <span class="req">⚠ Obligatorio:</span><br>
             · Formato: <b>PNG o JPG</b><br>
             · Tamaño exacto: <b>250 px de ancho × 150 px de alto</b><br>
-            · Fondo: <b>blanco o transparente</b> (el fondo blanco se elimina automáticamente)<br><br>
+            · Fondo: <b>blanco o transparente</b><br><br>
             No se aceptan logos que no cumplan estas condiciones.
           </div>
+        </div>
+        <div class="card">
+          <div class="card-label">Tus datos</div>
+          <div class="user-form">
+            <div class="form-row">
+              <label>Nombre completo</label>
+              <input class="form-input" id="user-name" type="text" placeholder="Juan García" maxlength="80"/>
+            </div>
+            <div class="form-row">
+              <label>Email</label>
+              <input class="form-input" id="user-email" type="email" placeholder="juan@empresa.com" maxlength="100"/>
+            </div>
+          </div>
+          <div class="form-saved" id="form-saved">✓ Datos guardados para la próxima vez</div>
         </div>
         <div class="card">
           <div class="card-label">Tu logo</div>
@@ -298,13 +278,7 @@
             </div>
             <div class="card">
               <div class="card-label">Resultados de uso</div>
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px;flex-wrap:wrap">
-                <div class="results-count" id="results-count"></div>
-                <div style="display:flex;gap:6px">
-                  <button class="btn btn-primary" id="btn-excel" style="width:auto;padding:6px 12px;font-size:11px" disabled>↓ Excel</button>
-                  <button class="btn btn-primary" id="btn-zip" style="width:auto;padding:6px 12px;font-size:11px" disabled>↓ ZIP flyers</button>
-                </div>
-              </div>
+              <div class="results-count" id="results-count"></div>
               <div class="results-wrap">
                 <table class="results-table" id="results-table">
                   <thead>
@@ -399,45 +373,29 @@ async function init() {
 }
 init();
 
-// ── MODAL DATOS USUARIO ───────────────────────────────────────
+// ── DATOS USUARIO (localStorage) ─────────────────────────────
 const USER_KEY = 'ua-user-data';
-let userData = { name: '', email: '' };
-
-function initUserModal() {
+function loadUserData() {
   try {
-    const saved = JSON.parse(localStorage.getItem(USER_KEY) || '{}');
-    if (saved.name && saved.email) {
-      userData = saved;
-      return; // Ya tiene datos, no mostrar modal
-    }
+    const d = JSON.parse(localStorage.getItem(USER_KEY) || '{}');
+    if (d.name)  document.getElementById('user-name').value  = d.name;
+    if (d.email) document.getElementById('user-email').value = d.email;
   } catch(_) {}
-  // Mostrar modal
-  const modal = document.getElementById('user-modal');
-  modal.style.display = 'flex';
-  document.body.classList.add('modal-open');
-  document.getElementById('user-name').focus();
 }
-
-function submitModal() {
+function saveUserData() {
   const name  = document.getElementById('user-name').value.trim();
   const email = document.getElementById('user-email').value.trim();
-  const err   = document.getElementById('modal-err');
-  if (!name) { err.textContent = 'Ingresá tu nombre completo.'; return; }
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { err.textContent = 'Ingresá un email válido.'; return; }
-  err.textContent = '';
-  userData = { name, email };
-  try { localStorage.setItem(USER_KEY, JSON.stringify(userData)); } catch(_) {}
-  const modal = document.getElementById('user-modal');
-  modal.style.transition = 'opacity .25s';
-  modal.style.opacity = '0';
-  document.body.classList.remove('modal-open');
-  setTimeout(() => modal.style.display = 'none', 250);
+  if (!name && !email) return;
+  try {
+    localStorage.setItem(USER_KEY, JSON.stringify({ name, email }));
+    const msg = document.getElementById('form-saved');
+    msg.style.display = 'block';
+    setTimeout(() => msg.style.display = 'none', 2500);
+  } catch(_) {}
 }
-
-document.getElementById('btn-modal-enter').addEventListener('click', submitModal);
-document.getElementById('user-email').addEventListener('keydown', e => { if (e.key === 'Enter') submitModal(); });
-document.getElementById('user-name').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('user-email').focus(); });
-initUserModal();
+document.getElementById('user-name').addEventListener('blur', saveUserData);
+document.getElementById('user-email').addEventListener('blur', saveUserData);
+loadUserData();
 
 // ── TABS ──────────────────────────────────────────────────────
 document.querySelectorAll('.tab').forEach(t => {
@@ -630,8 +588,8 @@ document.getElementById('btn-dl').addEventListener('click', async () => {
   a.click();
 
   // Guardar registro en Firestore
-  const name  = userData.name  || '(sin nombre)';
-  const email = userData.email || '(sin email)';
+  const name  = document.getElementById('user-name').value.trim();
+  const email = document.getElementById('user-email').value.trim();
   try {
     const { collection, addDoc } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
     await addDoc(collection(db, 'results'), {
@@ -688,29 +646,13 @@ function renderAdmin() {
   ctx.restore();
 }
 
-function removeWhiteBg(img) {
-  const cv = document.createElement('canvas');
-  cv.width = img.naturalWidth; cv.height = img.naturalHeight;
-  const ctx = cv.getContext('2d');
-  ctx.drawImage(img, 0, 0);
-  const imgData = ctx.getImageData(0, 0, cv.width, cv.height);
-  const d = imgData.data;
-  for (let i = 0; i < d.length; i += 4) {
-    const r = d[i], g = d[i+1], b = d[i+2];
-    if (r >= 250 && g >= 250 && b >= 250) d[i+3] = 0; // blanco puro → transparente
-  }
-  ctx.putImageData(imgData, 0, 0);
-  return cv;
-}
-
 function drawComposite(canvas, base, logo, c) {
   const W = base.naturalWidth, H = base.naturalHeight;
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
   ctx.drawImage(base, 0, 0);
   if (logo) {
-    const cleanLogo = removeWhiteBg(logo);
-    ctx.drawImage(cleanLogo, W * c.px, H * c.py, c.lw, c.lh);
+    ctx.drawImage(logo, W * c.px, H * c.py, c.lw, c.lh);
   } else {
     // Mostrar área reservada para el logo
     const x = W * c.px, y = H * c.py, lw = c.lw, lh = c.lh;
@@ -787,12 +729,10 @@ document.getElementById('btn-pin-change').addEventListener('click', async () => 
 });
 
 // ── RESULTADOS ───────────────────────────────────────────────
-let cachedResults = [];
-
 async function loadResults() {
   try {
     const { collection, getDocs, orderBy, query, limit } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
-    const q = query(collection(db, 'results'), orderBy('date', 'desc'), limit(200));
+    const q = query(collection(db, 'results'), orderBy('date', 'desc'), limit(50));
     const snap = await getDocs(q);
     const tbody = document.getElementById('results-body');
     const count = document.getElementById('results-count');
@@ -801,9 +741,9 @@ async function loadResults() {
       count.textContent = '';
       return;
     }
-    cachedResults = snap.docs.map(d => d.data());
-    count.textContent = `${cachedResults.length} descarga${cachedResults.length !== 1 ? 's' : ''} registrada${cachedResults.length !== 1 ? 's' : ''}`;
-    tbody.innerHTML = cachedResults.map(r => {
+    count.textContent = `${snap.size} descarga${snap.size !== 1 ? 's' : ''} registrada${snap.size !== 1 ? 's' : ''}`;
+    tbody.innerHTML = snap.docs.map(d => {
+      const r = d.data();
       const date = new Date(r.date).toLocaleString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
       return `<tr>
         <td><img src="${r.thumb}" alt="resultado"/></td>
@@ -812,72 +752,8 @@ async function loadResults() {
         <td style="white-space:nowrap;color:var(--muted)">${date}</td>
       </tr>`;
     }).join('');
-    document.getElementById('btn-excel').disabled = false;
-    document.getElementById('btn-zip').disabled = false;
   } catch(e) { console.warn('Error cargando resultados:', e); }
 }
-
-// ── EXCEL EXPORT ──────────────────────────────────────────────
-document.getElementById('btn-excel').addEventListener('click', () => {
-  if (!cachedResults.length) return;
-  const rows = [['Nombre', 'Email', 'Fecha']];
-  cachedResults.forEach(r => {
-    const date = new Date(r.date).toLocaleString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
-    rows.push([r.name, r.email, date]);
-  });
-  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('
-');
-  const bom = '﻿';
-  const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `resultados_cobranding_${new Date().toISOString().slice(0,10)}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-});
-
-// ── ZIP FLYERS ────────────────────────────────────────────────
-document.getElementById('btn-zip').addEventListener('click', async () => {
-  if (!cachedResults.length) return;
-  const btn = document.getElementById('btn-zip');
-  btn.textContent = 'Generando...';
-  btn.disabled = true;
-
-  try {
-    // Cargar JSZip desde CDN
-    await new Promise((res, rej) => {
-      if (window.JSZip) return res();
-      const s = document.createElement('script');
-      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
-      s.onload = res; s.onerror = rej;
-      document.head.appendChild(s);
-    });
-
-    const zip = new JSZip();
-    cachedResults.forEach((r, i) => {
-      const date = new Date(r.date).toISOString().slice(0,10);
-      const safeName = (r.name || 'usuario').replace(/[^a-zA-Z0-9]/g, '_').slice(0,30);
-      const filename = `${String(i+1).padStart(3,'0')}_${date}_${safeName}.png`;
-      const b64data = r.thumb.split(',')[1];
-      zip.file(filename, b64data, { base64: true });
-    });
-
-    const blob = await zip.generateAsync({ type: 'blob' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `flyers_cobranding_${new Date().toISOString().slice(0,10)}.zip`;
-    a.click();
-    URL.revokeObjectURL(url);
-  } catch(e) {
-    console.error('Error generando ZIP:', e);
-    alert('Error al generar el ZIP. Intentá de nuevo.');
-  }
-
-  btn.innerHTML = '↓ ZIP flyers';
-  btn.disabled = false;
-});
 
 // ── HISTORIAL ─────────────────────────────────────────────────
 function renderHistory(history) {
