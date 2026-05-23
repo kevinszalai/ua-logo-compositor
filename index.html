@@ -228,6 +228,30 @@ footer{
 .val-text span{font-size:10px;opacity:.8;}
 @keyframes valPop{0%{transform:scale(.95);opacity:0}100%{transform:scale(1);opacity:1}}
 .val-item.ok,.val-item.fail{animation:valPop .25s ease;}
+
+/* ── DASHBOARD ── */
+.dashboard{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:1.5rem;}
+.dash-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--rlg);padding:1.1rem 1.25rem;}
+.dash-card .dash-num{font-size:2rem;font-weight:800;color:var(--ua-blue);letter-spacing:-.04em;line-height:1;}
+.dash-card .dash-label{font-size:11px;color:var(--muted);margin-top:4px;}
+.dash-card .dash-sub{font-size:10px;color:var(--hint);margin-top:2px;}
+.chart-wrap{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--rlg);padding:1.25rem;margin-bottom:1.5rem;}
+.chart-title{font-size:11px;font-weight:700;color:var(--ua-blue);letter-spacing:.08em;text-transform:uppercase;margin-bottom:1rem;display:flex;align-items:center;gap:6px;}
+.chart-title::before{content:'';display:inline-block;width:3px;height:12px;background:var(--ua-cyan);border-radius:2px;}
+.chart-bars{display:flex;align-items:flex-end;gap:4px;height:80px;}
+.chart-bar-wrap{display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;}
+.chart-bar{width:100%;border-radius:4px 4px 0 0;background:var(--ua-blue);transition:height .5s ease,opacity .2s;opacity:.85;min-height:2px;}
+.chart-bar:hover{opacity:1;}
+.chart-bar-label{font-size:9px;color:var(--hint);white-space:nowrap;}
+.chart-bar-val{font-size:9px;color:var(--muted);font-weight:600;}
+/* ── FILTROS ── */
+.filter-row{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:center;}
+.filter-input{padding:7px 10px;border:1.5px solid var(--border2);border-radius:8px;font-family:'Poppins',sans-serif;font-size:12px;background:var(--bg);color:var(--ua-dark);outline:none;transition:border-color .15s;flex:1;min-width:140px;}
+.filter-input:focus{border-color:var(--ua-blue);}
+.filter-input::placeholder{color:var(--hint);}
+.filter-btn{padding:7px 12px;border-radius:8px;border:1.5px solid var(--border2);background:var(--bg);font-family:'Poppins',sans-serif;font-size:11px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .15s;white-space:nowrap;}
+.filter-btn:hover{border-color:var(--ua-blue);color:var(--ua-blue);}
+.filter-btn.active{background:var(--ua-blue);border-color:var(--ua-blue);color:#fff;}
 </style>
 </head>
 <body>
@@ -412,14 +436,45 @@ footer{
                 <div class="history-empty">Sin historial todavía</div>
               </div>
             </div>
+            <!-- DASHBOARD -->
+            <div class="dashboard" id="dashboard" style="display:none">
+              <div class="dash-card">
+                <div class="dash-num" id="dash-total">0</div>
+                <div class="dash-label">Descargas totales</div>
+              </div>
+              <div class="dash-card">
+                <div class="dash-num" id="dash-today">0</div>
+                <div class="dash-label">Hoy</div>
+                <div class="dash-sub" id="dash-today-date"></div>
+              </div>
+              <div class="dash-card">
+                <div class="dash-num" id="dash-week">0</div>
+                <div class="dash-label">Últimos 7 días</div>
+              </div>
+            </div>
+
+            <!-- GRÁFICO -->
+            <div class="chart-wrap" id="chart-wrap" style="display:none">
+              <div class="chart-title">Descargas por día — últimos 14 días</div>
+              <div class="chart-bars" id="chart-bars"></div>
+            </div>
+
+            <!-- TABLA DE RESULTADOS -->
             <div class="card">
               <div class="card-label">Resultados de uso</div>
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px;flex-wrap:wrap">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px;flex-wrap:wrap">
                 <div class="results-count" id="results-count"></div>
                 <div style="display:flex;gap:6px">
                   <button class="btn btn-primary" id="btn-excel" style="width:auto;padding:6px 14px;font-size:11px" disabled>↓ Excel</button>
                   <button class="btn btn-primary" id="btn-zip" style="width:auto;padding:6px 14px;font-size:11px" disabled>↓ ZIP flyers</button>
                 </div>
+              </div>
+              <!-- FILTROS -->
+              <div class="filter-row">
+                <input class="filter-input" id="filter-search" type="text" placeholder="Buscar por nombre o email..."/>
+                <button class="filter-btn active" id="filter-all" onclick="applyFilter('all')">Todos</button>
+                <button class="filter-btn" id="filter-today" onclick="applyFilter('today')">Hoy</button>
+                <button class="filter-btn" id="filter-week" onclick="applyFilter('week')">7 días</button>
               </div>
               <div class="results-wrap">
                 <table class="results-table">
@@ -811,22 +866,114 @@ document.getElementById('btn-pin-change').addEventListener('click', async () => 
 
 // RESULTADOS
 let cachedResults = [];
+let currentFilter = 'all';
+let currentSearch = '';
+
 async function loadResults() {
   try {
     const q = query(collection(db,'results'), orderBy('date','desc'), limit(200));
     const snap = await getDocs(q);
-    const tbody = document.getElementById('results-body'), count = document.getElementById('results-count');
-    if (snap.empty){tbody.innerHTML='<tr><td colspan="4"><div class="results-empty">Sin registros todavía</div></td></tr>';count.textContent='';return;}
+    if (snap.empty) {
+      document.getElementById('results-body').innerHTML='<tr><td colspan="4"><div class="results-empty">Sin registros todavía</div></td></tr>';
+      document.getElementById('results-count').textContent=''; return;
+    }
     cachedResults = snap.docs.map(d=>d.data());
-    count.textContent = cachedResults.length + ' descarga' + (cachedResults.length!==1?'s':'') + ' registrada' + (cachedResults.length!==1?'s':'');
-    tbody.innerHTML = cachedResults.map(r=>{
-      const date=new Date(r.date).toLocaleString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
-      return '<tr><td><img src="'+r.thumb+'" alt="resultado"/></td><td>'+r.name+'</td><td>'+r.email+'</td><td style="white-space:nowrap;color:var(--muted)">'+date+'</td></tr>';
-    }).join('');
+    renderDashboard();
+    renderChart();
+    renderTable();
     document.getElementById('btn-excel').disabled=false;
     document.getElementById('btn-zip').disabled=false;
   } catch(e){console.warn('Error resultados:',e);}
 }
+
+function renderDashboard() {
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0,10);
+  const weekAgo = new Date(now - 7*24*60*60*1000);
+  const total = cachedResults.length;
+  const today = cachedResults.filter(r => r.date.slice(0,10) === todayStr).length;
+  const week  = cachedResults.filter(r => new Date(r.date) >= weekAgo).length;
+  document.getElementById('dash-total').textContent = total;
+  document.getElementById('dash-today').textContent = today;
+  document.getElementById('dash-week').textContent  = week;
+  document.getElementById('dash-today-date').textContent =
+    now.toLocaleDateString('es-AR',{day:'2-digit',month:'long'});
+  document.getElementById('dashboard').style.display = 'grid';
+}
+
+function renderChart() {
+  const bars = document.getElementById('chart-bars');
+  const days = 14;
+  const counts = {};
+  const now = new Date();
+  for (let i = days-1; i >= 0; i--) {
+    const d = new Date(now); d.setDate(d.getDate()-i);
+    counts[d.toISOString().slice(0,10)] = 0;
+  }
+  cachedResults.forEach(r => {
+    const k = r.date.slice(0,10);
+    if (k in counts) counts[k]++;
+  });
+  const entries = Object.entries(counts);
+  const maxVal = Math.max(...Object.values(counts), 1);
+  bars.innerHTML = entries.map(([date, val]) => {
+    const pct = Math.round((val / maxVal) * 100);
+    const h = Math.max(pct * 0.8, val > 0 ? 4 : 2);
+    const d = new Date(date + 'T12:00:00');
+    const label = d.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'});
+    return '<div class="chart-bar-wrap" title="' + label + ': ' + val + ' descarga' + (val!==1?'s':'') + '">'
+      + (val > 0 ? '<div class="chart-bar-val">' + val + '</div>' : '<div class="chart-bar-val" style="opacity:0">0</div>')
+      + '<div class="chart-bar" style="height:' + h + 'px"></div>'
+      + '<div class="chart-bar-label">' + label + '</div>'
+      + '</div>';
+  }).join('');
+  document.getElementById('chart-wrap').style.display = 'block';
+}
+
+function renderTable() {
+  const tbody = document.getElementById('results-body');
+  const count = document.getElementById('results-count');
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0,10);
+  const weekAgo = new Date(now - 7*24*60*60*1000);
+  const search = currentSearch.toLowerCase().trim();
+
+  let filtered = cachedResults.filter(r => {
+    if (currentFilter === 'today') return r.date.slice(0,10) === todayStr;
+    if (currentFilter === 'week')  return new Date(r.date) >= weekAgo;
+    return true;
+  });
+  if (search) {
+    filtered = filtered.filter(r =>
+      (r.name||'').toLowerCase().includes(search) ||
+      (r.email||'').toLowerCase().includes(search)
+    );
+  }
+  count.textContent = filtered.length + ' descarga' + (filtered.length!==1?'s':'') + ' encontrada' + (filtered.length!==1?'s':'');
+  if (!filtered.length) {
+    tbody.innerHTML='<tr><td colspan="4"><div class="results-empty">Sin resultados para este filtro</div></td></tr>'; return;
+  }
+  tbody.innerHTML = filtered.map(r=>{
+    const date=new Date(r.date).toLocaleString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    return '<tr><td><img src="'+r.thumb+'" alt="resultado"/></td><td>'+r.name+'</td><td>'+r.email+'</td><td style="white-space:nowrap;color:var(--muted)">'+date+'</td></tr>';
+  }).join('');
+}
+
+function applyFilter(f) {
+  currentFilter = f;
+  ['all','today','week'].forEach(x => {
+    document.getElementById('filter-'+x).classList.toggle('active', x===f);
+  });
+  renderTable();
+}
+
+// Search input live filter
+document.getElementById('filter-search').addEventListener('input', function() {
+  currentSearch = this.value;
+  renderTable();
+});
+
+window.applyFilter = applyFilter;
 
 // EXCEL
 document.getElementById('btn-excel').addEventListener('click', ()=>{
