@@ -1057,9 +1057,17 @@ document.getElementById('btn-save').addEventListener('click', async () => {
         flyers[adminFlyerIdx].b64 = pendingFlyerDataUrl;
         pendingFlyerDataUrl = null;
       }
-      saveData.flyers = flyers;
-      saveData.activeFlyer = 0;
     }
+    // Comprimir todos los flyers antes de guardar
+    const compressedFlyers = await Promise.all(flyers.map(f => new Promise(res => {
+      compressImage(f.b64, 900, 0.75, compressed => {
+        res({ ...f, b64: compressed });
+      });
+    })));
+    flyers = compressedFlyers;
+    saveData.flyers = compressedFlyers;
+    saveData.activeFlyer = 0;
+    saveData.flyerB64 = compressedFlyers[0]?.b64;
     await setDoc(doc(db, 'config', 'main'), saveData);
     btn.innerHTML = '✓ Publicado'; status.style.color = 'var(--green)';
     status.textContent = 'Los cambios ya están disponibles para todos.';
@@ -1573,18 +1581,28 @@ window._deleteFlyer = async function(idx) {
 
 async function saveFlyersToFirebase() {
   try {
+    // Comprimir todos los flyers antes de guardar
+    const compressedFlyers = await Promise.all(flyers.map(f => new Promise(res => {
+      compressImage(f.b64, 900, 0.75, compressed => {
+        res({ ...f, b64: compressed });
+      });
+    })));
     const snap = await getDoc(doc(db, 'config', 'main'));
     const existing = snap.exists() ? snap.data() : {};
     await setDoc(doc(db, 'config', 'main'), {
       ...existing,
-      flyers,
+      flyers: compressedFlyers,
       activeFlyer: 0,
-      // keep legacy fields in sync with first flyer
-      flyerB64: flyers[0]?.b64,
-      px: flyers[0]?.px, py: flyers[0]?.py,
-      lw: flyers[0]?.lw, lh: flyers[0]?.lh,
+      flyerB64: compressedFlyers[0]?.b64,
+      px: compressedFlyers[0]?.px, py: compressedFlyers[0]?.py,
+      lw: compressedFlyers[0]?.lw, lh: compressedFlyers[0]?.lh,
     });
-  } catch(e) { console.warn('Error guardando flyers:', e); }
+    // Update local array with compressed versions
+    flyers = compressedFlyers;
+  } catch(e) {
+    console.warn('Error guardando flyers:', e);
+    throw e;
+  }
 }
 
 // ── DRAG EN ADMIN CANVAS ───────────────────────────────────────
