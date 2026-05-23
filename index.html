@@ -234,7 +234,6 @@
 <!-- Firebase SDK -->
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js';
 import { getFirestore, doc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 // ── CONFIGURACIÓN FIREBASE ─────────────────────────────────────
@@ -254,13 +253,12 @@ const PIN = '4896';
 const LOGO_W = 250, LOGO_H = 150;
 
 const app = initializeApp(firebaseConfig);
-const storage = getStorage(app);
 const db = getFirestore(app);
 
 let flyerImg = null, logoImg = null;
 let cfg = { px: 0.880, py: 0.844, lw: LOGO_W, lh: LOGO_H };
 let adminUnlocked = false;
-let pendingFlyerFile = null;
+let pendingFlyerDataUrl = null;
 
 // ── CARGAR CONFIG Y FLYER DESDE FIREBASE ──────────────────────
 async function init() {
@@ -270,8 +268,8 @@ async function init() {
       const data = snap.data();
       cfg = { px: data.px ?? cfg.px, py: data.py ?? cfg.py, lw: data.lw ?? cfg.lw, lh: data.lh ?? cfg.lh };
       syncSlidersFromCfg();
-      if (data.flyerUrl) {
-        loadImgFromSrc(data.flyerUrl, img => { flyerImg = img; showFlyerPreview(); });
+      if (data.flyerB64) {
+        loadImgFromSrc(data.flyerB64, img => { flyerImg = img; showFlyerPreview(); });
         return;
       }
     }
@@ -371,8 +369,12 @@ setupDrop('logo-drop', 'logo-input', (f, img) => {
 
 // ── DROP FLYER (admin) ────────────────────────────────────────
 setupDrop('flyer-drop', 'flyer-input', (f, img) => {
-  pendingFlyerFile = f;
+  pendingFlyerDataUrl = null;
   flyerImg = img;
+  // Convert file to base64 for Firestore
+  const fr = new FileReader();
+  fr.onload = e => { pendingFlyerDataUrl = e.target.result; };
+  fr.readAsDataURL(f);
   document.getElementById('flyer-ok').style.display = 'block';
   document.getElementById('flyer-fname').textContent = f.name;
   renderAdmin();
@@ -403,17 +405,17 @@ document.getElementById('btn-save').addEventListener('click', async () => {
   };
 
   try {
-    let flyerUrl = null;
-    if (pendingFlyerFile) {
-      const storageRef = ref(storage, 'flyer/flyer_base.jpg');
-      await uploadBytes(storageRef, pendingFlyerFile);
-      flyerUrl = await getDownloadURL(storageRef);
-      pendingFlyerFile = null;
+    const saveData = { ...cfg };
+    if (pendingFlyerDataUrl) {
+      saveData.flyerB64 = pendingFlyerDataUrl;
+      pendingFlyerDataUrl = null;
     } else {
       const snap = await getDoc(doc(db, 'config', 'main'));
-      if (snap.exists()) flyerUrl = snap.data().flyerUrl ?? null;
+      if (snap.exists() && snap.data().flyerB64) {
+        saveData.flyerB64 = snap.data().flyerB64;
+      }
     }
-    await setDoc(doc(db, 'config', 'main'), { ...cfg, flyerUrl });
+    await setDoc(doc(db, 'config', 'main'), saveData);
     btn.innerHTML = '✓ Publicado';
     status.style.color = 'var(--green)';
     status.textContent = 'Los cambios ya están disponibles para todos los usuarios.';
