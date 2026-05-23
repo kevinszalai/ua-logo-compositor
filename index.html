@@ -994,29 +994,28 @@ setupDrop('logo-drop', 'logo-input', (f, img) => {
 document.getElementById('flyer-input').addEventListener('change', function() {
   const f = this.files[0]; if (!f) return;
   if (flyers.length >= 3) { alert('Máximo 3 flyers activos. Eliminá uno antes de agregar otro.'); return; }
-  readImg(f, img => {
-    const fr = new FileReader();
-    fr.onload = e => {
-      const name = f.name.replace(/\.[^.]+$/, '').slice(0, 30);
-      // Defaults predeterminados para cada flyer nuevo
-      const newFlyer = { b64: e.target.result, name,
-        px: 0.880, py: 0.844, lw: 250, lh: 150 };
-      // Sync sliders to defaults
-      cfg = { px: 0.880, py: 0.844, lw: 250, lh: 150 };
-      syncSlidersFromCfg();
-      flyers.push(newFlyer);
-      adminFlyerIdx = flyers.length - 1;
+  const fr = new FileReader();
+  fr.onload = e => {
+    const dataUrl = e.target.result;
+    const name = f.name.replace(/\.[^.]+$/, '').slice(0, 30);
+    const newFlyer = { b64: dataUrl, name, px: 0.880, py: 0.844, lw: 250, lh: 150 };
+    flyers.push(newFlyer);
+    adminFlyerIdx = flyers.length - 1;
+    cfg = { px: 0.880, py: 0.844, lw: 250, lh: 150 };
+    syncSlidersFromCfg();
+    loadImgFromSrc(dataUrl, img => {
       flyerImg = img;
-      document.getElementById('flyer-ok').style.display = 'block';
-      document.getElementById('flyer-fname').textContent = f.name;
       renderAdmin();
-      renderFlyersGrid();
-      renderFlyerSelector();
       if (logoImg) renderPreview();
-    };
-    fr.readAsDataURL(f);
-  });
-});
+    });
+    document.getElementById('flyer-ok').style.display = 'block';
+    document.getElementById('flyer-fname').textContent = f.name;
+    renderFlyersGrid();
+    renderFlyerSelector();
+    this.value = '';
+  };
+  fr.readAsDataURL(f);
+});;
 
 // SLIDERS
 [['sx','vx','%'],['sy','vy','%'],['slw','vlw',''],['slh','vlh','']].forEach(([sid,vid,suf]) => {
@@ -1511,23 +1510,24 @@ window._renameFlyer = function(idx, name) {
 
 window._replaceFlyer = function(idx, input) {
   const f = input.files[0]; if (!f) return;
-  readImg(f, img => {
-    const fr = new FileReader();
-    fr.onload = e => {
-      flyers[idx].b64 = e.target.result;
-      // If editing this flyer, update canvas too
-      if (idx === adminFlyerIdx) {
+  const fr = new FileReader();
+  fr.onload = e => {
+    const dataUrl = e.target.result;
+    flyers[idx].b64 = dataUrl;
+    // Update canvas if this is the one being edited
+    if (idx === adminFlyerIdx) {
+      loadImgFromSrc(dataUrl, img => {
         flyerImg = img;
         renderAdmin();
         if (logoImg) renderPreview();
-      }
-      renderFlyersGrid();
-      renderFlyerSelector();
-      document.getElementById('flyer-ok').style.display = 'block';
-      document.getElementById('flyer-fname').textContent = f.name;
-    };
-    fr.readAsDataURL(f);
-  });
+      });
+    }
+    renderFlyersGrid();
+    renderFlyerSelector();
+    document.getElementById('flyer-ok').style.display = 'block';
+    document.getElementById('flyer-fname').textContent = f.name;
+  };
+  fr.readAsDataURL(f);
 };
 
 window._selectUserFlyer = selectUserFlyer;
