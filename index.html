@@ -204,7 +204,7 @@
             <span class="req">⚠ Obligatorio:</span><br>
             · Formato: <b>PNG o JPG</b><br>
             · Tamaño exacto: <b>250 px de ancho × 150 px de alto</b><br>
-            · Fondo: <b>blanco o transparente</b><br><br>
+            · Fondo: <b>blanco o transparente</b> (el fondo blanco se elimina automáticamente)<br><br>
             No se aceptan logos que no cumplan estas condiciones.
           </div>
         </div>
@@ -414,7 +414,12 @@ function submitModal() {
   const email = userData.email || '(sin email)';
   const err   = document.getElementById('modal-err');
   if (!name) { err.textContent = 'Ingresá tu nombre completo.'; return; }
-  if (!email || !email.includes('@')) { err.textContent = 'Ingresá un email válido.'; return; }
+  const validDomains = ['ua.com.ar', 'universal-assistance.com'];
+  const emailDomain = email.split('@')[1] || '';
+  if (!email || !email.includes('@') || !validDomains.includes(emailDomain)) {
+    err.textContent = 'Solo se aceptan emails @ua.com.ar o @universal-assistance.com.';
+    return;
+  }
   err.textContent = '';
   userData = { name, email };
   try { localStorage.setItem(USER_KEY, JSON.stringify(userData)); } catch(_) {}
@@ -678,13 +683,29 @@ function renderAdmin() {
   ctx.restore();
 }
 
+function removeWhiteBg(img) {
+  const cv = document.createElement('canvas');
+  cv.width = img.naturalWidth; cv.height = img.naturalHeight;
+  const ctx = cv.getContext('2d');
+  ctx.drawImage(img, 0, 0);
+  const imgData = ctx.getImageData(0, 0, cv.width, cv.height);
+  const d = imgData.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const r = d[i], g = d[i+1], b = d[i+2];
+    if (r >= 250 && g >= 250 && b >= 250) d[i+3] = 0; // blanco puro → transparente
+  }
+  ctx.putImageData(imgData, 0, 0);
+  return cv;
+}
+
 function drawComposite(canvas, base, logo, c) {
   const W = base.naturalWidth, H = base.naturalHeight;
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
   ctx.drawImage(base, 0, 0);
   if (logo) {
-    ctx.drawImage(logo, W * c.px, H * c.py, c.lw, c.lh);
+    const cleanLogo = removeWhiteBg(logo);
+    ctx.drawImage(cleanLogo, W * c.px, H * c.py, c.lw, c.lh);
   } else {
     // Mostrar área reservada para el logo
     const x = W * c.px, y = H * c.py, lw = c.lw, lh = c.lh;
