@@ -413,8 +413,8 @@ function initUserModal() {
 }
 
 function submitModal() {
-  const name  = userData.name  || '(sin nombre)';
-  const email = userData.email || '(sin email)';
+  const name  = document.getElementById('user-name').value.trim();
+  const email = document.getElementById('user-email').value.trim();
   const err   = document.getElementById('modal-err');
   if (!name) { err.textContent = 'Ingresá tu nombre completo.'; return; }
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { err.textContent = 'Ingresá un email válido.'; return; }
