@@ -417,12 +417,7 @@ function submitModal() {
   const email = userData.email || '(sin email)';
   const err   = document.getElementById('modal-err');
   if (!name) { err.textContent = 'Ingresá tu nombre completo.'; return; }
-  const validDomains = ['ua.com.ar', 'universal-assistance.com'];
-  const emailDomain = email.split('@')[1] || '';
-  if (!email || !email.includes('@') || !validDomains.includes(emailDomain)) {
-    err.textContent = 'Solo se aceptan emails @ua.com.ar o @universal-assistance.com.';
-    return;
-  }
+  if (!email || !email.includes('@') || !email.includes('.')) { err.textContent = 'Ingresá un email válido.'; return; }
   err.textContent = '';
   userData = { name, email };
   try { localStorage.setItem(USER_KEY, JSON.stringify(userData)); } catch(_) {}
