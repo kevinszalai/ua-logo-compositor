@@ -609,6 +609,13 @@ let pendingFlyerDataUrl = null;
 let currentPin = '4896';
 
 async function init() {
+  // Mostrar flyer de respaldo inmediatamente — no esperar Firebase
+  loadImgFromSrc(FLYER_FALLBACK, img => {
+    flyerImg = img;
+    showFlyerPreview();
+  });
+
+  // Luego intentar cargar config y flyer desde Firebase en segundo plano
   try {
     const snap = await getDoc(doc(db, 'config', 'main'));
     if (snap.exists()) {
@@ -621,18 +628,13 @@ async function init() {
         loadImgFromSrc(data.flyerB64, img => {
           flyerImg = img;
           showFlyerPreview();
+          // Si hay logo cargado, actualizar la preview también
+          if (logoImg) renderPreview();
           hideErrorBanner();
-        }, showErrorBanner);
-        return;
+        });
       }
     }
-  } catch(e) { console.warn('Firebase no disponible:', e); }
-  // Fallback local
-  loadImgFromSrc(FLYER_FALLBACK, img => {
-    flyerImg = img;
-    showFlyerPreview();
-    hideErrorBanner();
-  }, showErrorBanner);
+  } catch(e) { console.warn('Firebase no disponible, usando flyer local:', e); }
 }
 
 function showErrorBanner() {
