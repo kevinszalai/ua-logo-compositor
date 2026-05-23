@@ -83,6 +83,18 @@
     .btn-unlock{background:var(--accent);color:#fff;border:none;border-radius:var(--r);padding:11px;width:100%;font-family:'Poppins',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:opacity .15s}
     .btn-unlock:hover{opacity:.85}
 
+    /* MODAL DATOS USUARIO */
+    #user-modal{position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:50;display:flex;align-items:center;justify-content:center}
+    .modal-card{background:var(--surface);border-radius:var(--rlg);padding:2.5rem 2rem;width:100%;max-width:360px;box-shadow:0 8px 32px rgba(0,0,0,0.18)}
+    .modal-card h2{font-size:1.1rem;font-weight:600;letter-spacing:-.02em;margin-bottom:.3rem}
+    .modal-sub{font-size:12px;color:var(--muted);margin-bottom:1.5rem;line-height:1.6}
+    .modal-form{display:flex;flex-direction:column;gap:12px;margin-bottom:1.25rem}
+    .modal-field{display:flex;flex-direction:column;gap:4px}
+    .modal-field label{font-size:10px;font-weight:600;color:var(--hint);letter-spacing:.07em;text-transform:uppercase}
+    .modal-input{width:100%;padding:9px 12px;border:1px solid var(--border2);border-radius:var(--r);font-family:'Poppins',sans-serif;font-size:13px;background:var(--surface);color:var(--text);outline:none;transition:border-color .15s}
+    .modal-input:focus{border-color:var(--accent)}
+    .modal-err{font-size:11px;color:var(--red);min-height:14px}
+
     /* FORMULARIO USUARIO */
     .user-form{display:flex;flex-direction:column;gap:8px}
     .form-row{display:flex;flex-direction:column;gap:4px}
@@ -131,6 +143,26 @@
 </head>
 <body>
 
+<!-- MODAL DATOS USUARIO -->
+<div id="user-modal" style="display:none">
+  <div class="modal-card">
+    <h2>Bienvenido al Creador de cobranding</h2>
+    <p class="modal-sub">Ingresá tus datos para acceder. Los guardamos para que no tengas que completarlos de nuevo.</p>
+    <div class="modal-form">
+      <div class="modal-field">
+        <label>Nombre completo</label>
+        <input class="modal-input" id="user-name" type="text" placeholder="Juan García" maxlength="80"/>
+      </div>
+      <div class="modal-field">
+        <label>Email</label>
+        <input class="modal-input" id="user-email" type="email" placeholder="juan@empresa.com" maxlength="100"/>
+      </div>
+    </div>
+    <p class="modal-err" id="modal-err"></p>
+    <button class="btn btn-primary" id="btn-modal-enter" style="margin-top:0">Ingresar</button>
+  </div>
+</div>
+
 <!-- UA Brand bar -->
 <div class="ua-bar">
   <div class="ua-bar-inner">
@@ -175,20 +207,6 @@
             · Fondo: <b>blanco o transparente</b><br><br>
             No se aceptan logos que no cumplan estas condiciones.
           </div>
-        </div>
-        <div class="card">
-          <div class="card-label">Tus datos</div>
-          <div class="user-form">
-            <div class="form-row">
-              <label>Nombre completo</label>
-              <input class="form-input" id="user-name" type="text" placeholder="Juan García" maxlength="80"/>
-            </div>
-            <div class="form-row">
-              <label>Email</label>
-              <input class="form-input" id="user-email" type="email" placeholder="juan@empresa.com" maxlength="100"/>
-            </div>
-          </div>
-          <div class="form-saved" id="form-saved">✓ Datos guardados para la próxima vez</div>
         </div>
         <div class="card">
           <div class="card-label">Tu logo</div>
@@ -373,29 +391,43 @@ async function init() {
 }
 init();
 
-// ── DATOS USUARIO (localStorage) ─────────────────────────────
+// ── MODAL DATOS USUARIO ───────────────────────────────────────
 const USER_KEY = 'ua-user-data';
-function loadUserData() {
+let userData = { name: '', email: '' };
+
+function initUserModal() {
   try {
-    const d = JSON.parse(localStorage.getItem(USER_KEY) || '{}');
-    if (d.name)  document.getElementById('user-name').value  = d.name;
-    if (d.email) document.getElementById('user-email').value = d.email;
+    const saved = JSON.parse(localStorage.getItem(USER_KEY) || '{}');
+    if (saved.name && saved.email) {
+      userData = saved;
+      return; // Ya tiene datos, no mostrar modal
+    }
   } catch(_) {}
+  // Mostrar modal
+  const modal = document.getElementById('user-modal');
+  modal.style.display = 'flex';
+  document.getElementById('user-name').focus();
 }
-function saveUserData() {
-  const name  = document.getElementById('user-name').value.trim();
-  const email = document.getElementById('user-email').value.trim();
-  if (!name && !email) return;
-  try {
-    localStorage.setItem(USER_KEY, JSON.stringify({ name, email }));
-    const msg = document.getElementById('form-saved');
-    msg.style.display = 'block';
-    setTimeout(() => msg.style.display = 'none', 2500);
-  } catch(_) {}
+
+function submitModal() {
+  const name  = userData.name  || '(sin nombre)';
+  const email = userData.email || '(sin email)';
+  const err   = document.getElementById('modal-err');
+  if (!name) { err.textContent = 'Ingresá tu nombre completo.'; return; }
+  if (!email || !email.includes('@')) { err.textContent = 'Ingresá un email válido.'; return; }
+  err.textContent = '';
+  userData = { name, email };
+  try { localStorage.setItem(USER_KEY, JSON.stringify(userData)); } catch(_) {}
+  const modal = document.getElementById('user-modal');
+  modal.style.transition = 'opacity .25s';
+  modal.style.opacity = '0';
+  setTimeout(() => modal.style.display = 'none', 250);
 }
-document.getElementById('user-name').addEventListener('blur', saveUserData);
-document.getElementById('user-email').addEventListener('blur', saveUserData);
-loadUserData();
+
+document.getElementById('btn-modal-enter').addEventListener('click', submitModal);
+document.getElementById('user-email').addEventListener('keydown', e => { if (e.key === 'Enter') submitModal(); });
+document.getElementById('user-name').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('user-email').focus(); });
+initUserModal();
 
 // ── TABS ──────────────────────────────────────────────────────
 document.querySelectorAll('.tab').forEach(t => {
@@ -588,8 +620,8 @@ document.getElementById('btn-dl').addEventListener('click', async () => {
   a.click();
 
   // Guardar registro en Firestore
-  const name  = document.getElementById('user-name').value.trim();
-  const email = document.getElementById('user-email').value.trim();
+  const name  = userData.name  || '(sin nombre)';
+  const email = userData.email || '(sin email)';
   try {
     const { collection, addDoc } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
     await addDoc(collection(db, 'results'), {
