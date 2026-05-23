@@ -252,6 +252,51 @@ footer{
 .filter-btn{padding:7px 12px;border-radius:8px;border:1.5px solid var(--border2);background:var(--bg);font-family:'Poppins',sans-serif;font-size:11px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .15s;white-space:nowrap;}
 .filter-btn:hover{border-color:var(--ua-blue);color:var(--ua-blue);}
 .filter-btn.active{background:var(--ua-blue);border-color:var(--ua-blue);color:#fff;}
+
+/* ── SUCCESS OVERLAY ── */
+#success-overlay{
+  position:fixed;inset:0;z-index:100;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(0,36,71,.55);backdrop-filter:blur(6px);
+  opacity:0;pointer-events:none;transition:opacity .3s ease;
+}
+#success-overlay.show{opacity:1;pointer-events:all;}
+.success-card{
+  background:#fff;border-radius:20px;padding:2.5rem 2rem;
+  text-align:center;max-width:320px;width:100%;
+  box-shadow:0 20px 60px rgba(0,0,0,.2);
+  transform:scale(.85);transition:transform .35s cubic-bezier(.34,1.56,.64,1);
+  border-top:4px solid var(--ua-cyan);
+}
+#success-overlay.show .success-card{transform:scale(1);}
+.success-icon{
+  width:64px;height:64px;border-radius:50%;
+  background:linear-gradient(135deg,var(--ua-blue),var(--ua-teal));
+  display:flex;align-items:center;justify-content:center;
+  font-size:28px;margin:0 auto 1rem;
+  animation:successPop .5s cubic-bezier(.34,1.56,.64,1) .1s both;
+}
+@keyframes successPop{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+.success-title{font-size:1.15rem;font-weight:800;color:var(--ua-dark);margin-bottom:.4rem;letter-spacing:-.02em;}
+.success-sub{font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:1.5rem;}
+.success-btn{
+  background:var(--ua-blue);color:#fff;border:none;
+  border-radius:10px;padding:11px 24px;font-family:'Poppins',sans-serif;
+  font-size:13px;font-weight:600;cursor:pointer;
+  transition:background .18s;width:100%;
+}
+.success-btn:hover{background:var(--accent-hover);}
+
+/* ── CONFETTI ── */
+.confetti-piece{
+  position:fixed;width:8px;height:8px;border-radius:2px;
+  pointer-events:none;z-index:101;
+  animation:confettiFall linear forwards;
+}
+@keyframes confettiFall{
+  0%  {transform:translateY(-20px) rotate(0deg);opacity:1;}
+  100%{transform:translateY(100vh) rotate(720deg);opacity:0;}
+}
 </style>
 </head>
 <body>
@@ -778,6 +823,7 @@ document.getElementById('btn-dl').addEventListener('click', async () => {
   const resultB64 = tmp.toDataURL('image/png');
   const a = document.createElement('a'); a.download = 'flyer_con_logo.png'; a.href = resultB64; a.click();
   setStep(3);
+  setTimeout(showSuccess, 400);
   try {
     await addDoc(collection(db, 'results'), {
       name: userData.name || '(sin nombre)', email: userData.email || '(sin email)',
@@ -1048,6 +1094,55 @@ function setStep(n) {
   });
 }
 
+
+// ── SUCCESS + CONFETTI ────────────────────────────────────────
+const UA_COLORS = ['#00528F','#008091','#00C4DF','#ff436e','#002447','#ffffff'];
+
+function launchConfetti() {
+  const count = 60;
+  for (let i = 0; i < count; i++) {
+    setTimeout(() => {
+      const el = document.createElement('div');
+      el.className = 'confetti-piece';
+      el.style.cssText = [
+        'left:' + (20 + Math.random()*60) + 'vw',
+        'top:-10px',
+        'background:' + UA_COLORS[Math.floor(Math.random()*UA_COLORS.length)],
+        'width:' + (6+Math.random()*6) + 'px',
+        'height:' + (6+Math.random()*6) + 'px',
+        'border-radius:' + (Math.random() > .5 ? '50%' : '2px'),
+        'animation-duration:' + (1.2+Math.random()*1.6) + 's',
+        'animation-delay:0s',
+      ].join(';');
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 3000);
+    }, i * 18);
+  }
+}
+
+function showSuccess() {
+  launchConfetti();
+  const ov = document.getElementById('success-overlay');
+  ov.style.display = 'flex';
+  requestAnimationFrame(() => requestAnimationFrame(() => ov.classList.add('show')));
+}
+
+function closeSuccess() {
+  const ov = document.getElementById('success-overlay');
+  ov.classList.remove('show');
+  setTimeout(() => { ov.style.display = 'none'; }, 300);
+  // Reset for new download
+  logoImg = null;
+  document.getElementById('logo-ok').style.display = 'none';
+  document.getElementById('val-box').style.display = 'none';
+  document.getElementById('preview-canvas').style.display = 'none';
+  document.getElementById('ph-user').style.display = 'flex';
+  document.getElementById('btn-dl').disabled = true;
+  document.getElementById('logo-input').value = '';
+  setStep(1);
+}
+window.closeSuccess = closeSuccess;
+
 // HELPERS
 function setupDrop(zid,iid,cb){
   const z=document.getElementById(zid),inp=document.getElementById(iid);
@@ -1068,5 +1163,15 @@ function syncSlidersFromCfg(){
   document.getElementById('vlw').textContent=cfg.lw; document.getElementById('vlh').textContent=cfg.lh;
 }
 </script>
+
+<!-- SUCCESS OVERLAY -->
+<div id="success-overlay">
+  <div class="success-card">
+    <div class="success-icon">✓</div>
+    <div class="success-title">¡Flyer descargado!</div>
+    <div class="success-sub">Tu flyer con cobranding está listo.<br>Podés encontrarlo en tu carpeta de descargas.</div>
+    <button class="success-btn" onclick="closeSuccess()">Descargar otro</button>
+  </div>
+</div>
 </body>
 </html>
