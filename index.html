@@ -453,6 +453,17 @@ footer{
 }
 .fi-add:hover{border-color:var(--ua-blue);color:var(--ua-blue);}
 .fi-add input{position:absolute;opacity:0;pointer-events:none;}
+
+/* ── NOMBRE FLYER EDITABLE ── */
+.fi-name-input{
+  width:100%;padding:4px 7px;border:1.5px solid var(--border2);
+  border-radius:6px;font-family:'Poppins',sans-serif;font-size:11px;font-weight:600;
+  background:var(--surface);color:var(--ua-dark);outline:none;
+  transition:border-color .15s;
+}
+.fi-name-input:focus{border-color:var(--ua-blue);}
+.fi-replace{position:relative;overflow:hidden;}
+.fi-replace input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
 </style>
 </head>
 <body>
@@ -958,8 +969,13 @@ setupDrop('logo-drop', 'logo-input', (f, img) => {
     okEl.style.display = 'none';
     logoImg = null;
     document.getElementById('btn-dl').disabled = true;
-    document.getElementById('preview-canvas').style.display = 'none';
-    document.getElementById('ph-user').style.display = 'flex';
+    // Mantener el flyer visible con el recuadro vacío
+    if (flyerImg) {
+      showFlyerPreview();
+    } else {
+      document.getElementById('preview-canvas').style.display = 'none';
+      document.getElementById('ph-user').style.display = 'flex';
+    }
     setStep(1);
     return;
   }
@@ -1453,24 +1469,66 @@ function renderFlyerSelector() {
 function renderFlyersGrid() {
   const grid = document.getElementById('flyers-grid');
   if (!grid) return;
-  if (!flyers.length) { grid.innerHTML = '<div style="font-size:11px;color:var(--hint);padding:8px 0">Sin flyers todavía</div>'; return; }
+  if (!flyers.length) {
+    grid.innerHTML = '<div style="font-size:11px;color:var(--hint);padding:8px 0">Sin flyers todavía</div>';
+    return;
+  }
   grid.innerHTML = flyers.map((f, i) => {
-    const isMain = i === 0;
+    const isMain    = i === 0;
     const isEditing = i === adminFlyerIdx;
-    return '<div class="flyer-item' + (isEditing?' active-flyer':'') + '">'
-      + '<img src="' + f.b64 + '" alt="flyer"/>'
+    return '<div class="flyer-item' + (isEditing ? ' active-flyer' : '') + '">'
+      // Thumbnail con botón de reemplazar imagen
+      + '<div class="fi-replace" title="Clic para reemplazar imagen">'
+      + '<img src="' + f.b64 + '" alt="flyer" style="width:48px;height:32px;object-fit:cover;border-radius:5px;border:1px solid var(--border);display:block"/>'
+      + '<input type="file" accept="image/*" onchange="window._replaceFlyer(' + i + ', this)"/>'
+      + '</div>'
+      // Nombre editable
       + '<div class="fi-info">'
-      + '<div class="fi-name">' + (f.name || 'Flyer ' + (i+1)) + '</div>'
+      + '<input class="fi-name-input" value="' + (f.name || 'Flyer ' + (i+1)) + '" '
+      + 'onchange="window._renameFlyer(' + i + ', this.value)" '
+      + 'onblur="window._renameFlyer(' + i + ', this.value)" '
+      + 'placeholder="Nombre del flyer"/>'
       + (isMain ? '<div class="fi-main">★ Principal</div>' : '')
       + '</div>'
+      // Acciones
       + '<div class="flyer-item-actions">'
-      + '<button class="fi-btn" onclick="window._editFlyer(' + i + ')">Editar</button>'
-      + (!isMain ? '<button class="fi-btn fi-btn-main" onclick="window._setMainFlyer(' + i + ')">Principal</button>' : '')
+      + '<button class="fi-btn' + (isEditing ? ' fi-btn-main' : '') + '" onclick="window._editFlyer(' + i + ')">'
+      + (isEditing ? '✓ Editando' : 'Editar') + '</button>'
+      + (!isMain ? '<button class="fi-btn" onclick="window._setMainFlyer(' + i + ')">Principal</button>' : '')
       + (flyers.length > 1 ? '<button class="fi-btn fi-btn-del" onclick="window._deleteFlyer(' + i + ')">✕</button>' : '')
       + '</div>'
       + '</div>';
   }).join('');
 }
+
+
+window._renameFlyer = function(idx, name) {
+  if (!name.trim()) return;
+  flyers[idx].name = name.trim();
+  // Update selector thumbnails silently (no full re-render to avoid losing focus)
+  renderFlyerSelector();
+};
+
+window._replaceFlyer = function(idx, input) {
+  const f = input.files[0]; if (!f) return;
+  readImg(f, img => {
+    const fr = new FileReader();
+    fr.onload = e => {
+      flyers[idx].b64 = e.target.result;
+      // If editing this flyer, update canvas too
+      if (idx === adminFlyerIdx) {
+        flyerImg = img;
+        renderAdmin();
+        if (logoImg) renderPreview();
+      }
+      renderFlyersGrid();
+      renderFlyerSelector();
+      document.getElementById('flyer-ok').style.display = 'block';
+      document.getElementById('flyer-fname').textContent = f.name;
+    };
+    fr.readAsDataURL(f);
+  });
+};
 
 window._selectUserFlyer = selectUserFlyer;
 window._editFlyer = function(idx) { selectAdminFlyer(idx); };
