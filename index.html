@@ -197,6 +197,21 @@ footer{
   .hinner{padding:0 1rem}
   main{padding:1.5rem 1rem}
 }
+
+/* ── STEPPER ── */
+.stepper{display:flex;align-items:center;gap:0;margin-bottom:2rem;padding:1.25rem 1.5rem;background:var(--surface);border-radius:var(--rlg);border:1.5px solid var(--border);}
+.step{display:flex;align-items:center;flex:1;gap:0;}
+.step-bubble{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;transition:all .4s ease;border:2px solid var(--border2);background:var(--surface);color:var(--hint);}
+.step-label{font-size:11px;font-weight:500;color:var(--hint);margin-left:8px;white-space:nowrap;transition:color .4s ease;}
+.step-line{flex:1;height:2px;background:var(--border2);margin:0 8px;transition:background .4s ease;border-radius:2px;}
+.step.active .step-bubble{background:var(--ua-blue);border-color:var(--ua-blue);color:#fff;box-shadow:0 2px 8px rgba(0,82,143,.3);}
+.step.active .step-label{color:var(--ua-blue);font-weight:600;}
+.step.done .step-bubble{background:var(--ua-teal);border-color:var(--ua-teal);color:#fff;box-shadow:0 2px 8px rgba(0,128,145,.3);}
+.step.done .step-bubble::after{content:'✓';}
+.step.done .step-label{color:var(--ua-teal);}
+.step.done + .step-line, .step-line.done{background:var(--ua-teal);}
+@keyframes stepPop{0%{transform:scale(.8);opacity:0}60%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}
+.step.active .step-bubble, .step.done .step-bubble{animation:stepPop .35s ease;}
 </style>
 </head>
 <body>
@@ -245,6 +260,22 @@ footer{
     <div class="panel-head">
       <h1>Agregá tu logo al flyer</h1>
       <p>Subí tu logo y lo posicionamos automáticamente. Descargá el resultado listo para usar.</p>
+    </div>
+    <div class="stepper" id="stepper">
+      <div class="step active" id="step-1">
+        <div class="step-bubble">1</div>
+        <span class="step-label">Subí tu logo</span>
+      </div>
+      <div class="step-line" id="line-1"></div>
+      <div class="step" id="step-2">
+        <div class="step-bubble">2</div>
+        <span class="step-label">Vista previa</span>
+      </div>
+      <div class="step-line" id="line-2"></div>
+      <div class="step" id="step-3">
+        <div class="step-bubble">3</div>
+        <span class="step-label">Descargá</span>
+      </div>
     </div>
     <div class="layout">
       <div class="canvas-outer">
@@ -567,11 +598,13 @@ setupDrop('logo-drop', 'logo-input', (f, img) => {
     errEl.innerHTML = '✕ ' + errs.join('<br>· '); errEl.style.display = 'block'; okEl.style.display = 'none';
     logoImg = null; document.getElementById('btn-dl').disabled = true;
     document.getElementById('preview-canvas').style.display = 'none';
-    document.getElementById('ph-user').style.display = 'flex'; return;
+    document.getElementById('ph-user').style.display = 'flex';
+    setStep(1); return;
   }
   errEl.style.display = 'none'; okEl.style.display = 'block';
   document.getElementById('logo-fname').textContent = f.name;
   logoImg = img; renderPreview(); document.getElementById('btn-dl').disabled = false;
+  setStep(2);
 });
 
 setupDrop('flyer-drop', 'flyer-input', (f, img) => {
@@ -627,6 +660,7 @@ document.getElementById('btn-dl').addEventListener('click', async () => {
   drawComposite(tmp, flyerImg, logoImg, cfg);
   const resultB64 = tmp.toDataURL('image/png');
   const a = document.createElement('a'); a.download = 'flyer_con_logo.png'; a.href = resultB64; a.click();
+  setStep(3);
   try {
     await addDoc(collection(db, 'results'), {
       name: userData.name || '(sin nombre)', email: userData.email || '(sin email)',
@@ -789,6 +823,21 @@ window._restoreFlyer = async function(index) {
   await setDoc(doc(db,'config','main'),{...data,flyerB64:item.b64,history:newHistory});
   loadImgFromSrc(item.b64, img=>{flyerImg=img;showFlyerPreview();renderAdmin();renderHistory(newHistory);});
 };
+
+// ── STEPPER ───────────────────────────────────────────────────
+function setStep(n) {
+  [1,2,3].forEach(i => {
+    const s = document.getElementById('step-' + i);
+    s.classList.remove('active','done');
+    if (i < n) s.classList.add('done');
+    else if (i === n) s.classList.add('active');
+  });
+  [1,2].forEach(i => {
+    const l = document.getElementById('line-' + i);
+    if (i < n) l.classList.add('done');
+    else l.classList.remove('done');
+  });
+}
 
 // HELPERS
 function setupDrop(zid,iid,cb){
