@@ -493,8 +493,26 @@ function drawComposite(canvas, base, logo, c) {
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
   ctx.drawImage(base, 0, 0);
-  if (!logo) return;
-  ctx.drawImage(logo, W * c.px, H * c.py, c.lw, c.lh);
+  if (logo) {
+    ctx.drawImage(logo, W * c.px, H * c.py, c.lw, c.lh);
+  } else {
+    // Mostrar área reservada para el logo
+    const x = W * c.px, y = H * c.py, lw = c.lw, lh = c.lh;
+    ctx.save();
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.fillRect(x, y, lw, lh);
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+    ctx.lineWidth = Math.max(2, W * 0.002);
+    ctx.setLineDash([8, 5]);
+    ctx.strokeRect(x, y, lw, lh);
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    const fs = Math.max(10, Math.round(lw * 0.11));
+    ctx.font = `500 ${fs}px Poppins,sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('Tu logo acá', x + lw / 2, y + lh / 2);
+    ctx.restore();
+  }
 }
 
 // ── HELPERS ───────────────────────────────────────────────────
