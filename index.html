@@ -1145,6 +1145,21 @@ function renderAdmin() {
 function removeWhiteBg(img) {
   const cv = document.createElement('canvas'); cv.width = img.naturalWidth; cv.height = img.naturalHeight;
   const ctx = cv.getContext('2d'); ctx.drawImage(img, 0, 0);
+  // Check if image has alpha channel - if PNG with transparency, don't process
+  const d = ctx.getImageData(0, 0, cv.width, cv.height);
+  let hasTransparency = false;
+  for (let i = 3; i < d.data.length; i+=4) if (d.data[i] < 255) { hasTransparency = true; break; }
+  if (!hasTransparency) {
+    // Only remove near-white pixels if image has no transparency
+    for (let i = 0; i < d.data.length; i+=4)
+      if (d.data[i]>=245 && d.data[i+1]>=245 && d.data[i+2]>=245) d.data[i+3] = 0;
+    ctx.putImageData(d, 0, 0);
+  }
+  return cv;
+}
+function _removeWhiteBg_unused(img) {
+  const cv = document.createElement('canvas'); cv.width = img.naturalWidth; cv.height = img.naturalHeight;
+  const ctx = cv.getContext('2d'); ctx.drawImage(img, 0, 0);
   const d = ctx.getImageData(0, 0, cv.width, cv.height);
   for (let i = 0; i < d.data.length; i+=4)
     if (d.data[i]>=250 && d.data[i+1]>=250 && d.data[i+2]>=250) d.data[i+3] = 0;
@@ -1155,6 +1170,7 @@ function drawComposite(canvas, base, logo, c) {
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d'); ctx.drawImage(base, 0, 0);
   if (logo) {
+    console.log('drawComposite logo:', logo.naturalWidth, logo.naturalHeight, 'pos:', W*c.px, H*c.py, 'size:', c.lw, c.lh, 'canvas:', W, H);
     ctx.drawImage(removeWhiteBg(logo), W*c.px, H*c.py, c.lw, c.lh);
   } else {
     const x=W*c.px, y=H*c.py;
