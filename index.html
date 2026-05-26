@@ -999,7 +999,7 @@ document.getElementById('flyer-input').addEventListener('change', function() {
     const rawDataUrl = e.target.result;
     const name = f.name.replace(/\.[^.]+$/, '').slice(0, 30);
     // Comprimir antes de guardar en Firestore (max 900px, calidad 0.75)
-    compressImage(rawDataUrl, 900, 0.75, dataUrl => {
+    compressImage(rawDataUrl, 1200, 0.85, dataUrl => {
       const newFlyer = { b64: dataUrl, name, px: 0.880, py: 0.844, lw: 250, lh: 150 };
       flyers.push(newFlyer);
       adminFlyerIdx = flyers.length - 1;
@@ -1060,7 +1060,7 @@ document.getElementById('btn-save').addEventListener('click', async () => {
     }
     // Comprimir todos los flyers antes de guardar
     const compressedFlyers = await Promise.all(flyers.map(f => new Promise(res => {
-      compressImage(f.b64, 900, 0.75, compressed => {
+      compressImage(f.b64, 1200, 0.85, compressed => {
         res({ ...f, b64: compressed });
       });
     })));
@@ -1071,7 +1071,14 @@ document.getElementById('btn-save').addEventListener('click', async () => {
     await setDoc(doc(db, 'config', 'main'), saveData);
     btn.innerHTML = '✓ Publicado'; status.style.color = 'var(--green)';
     status.textContent = 'Los cambios ya están disponibles para todos.';
-    if (logoImg) renderPreview();
+    // Reload flyerImg with the compressed version
+    const activeF = getActiveFlyer();
+    if (activeF) {
+      loadImgFromSrc(activeF.b64, img => {
+        flyerImg = img;
+        if (logoImg) renderPreview(); else showFlyerPreview();
+      });
+    } else if (logoImg) renderPreview();
     setTimeout(() => { btn.innerHTML = 'Publicar cambios'; btn.disabled = false; status.textContent = ''; }, 3000);
   } catch(e) {
     btn.innerHTML = 'Publicar cambios'; btn.disabled = false;
@@ -1465,8 +1472,14 @@ function selectUserFlyer(idx) {
   const f = getActiveFlyer();
   cfg = { px: f.px, py: f.py, lw: f.lw, lh: f.lh };
   syncSlidersFromCfg();
-  loadImgFromSrc(f.b64, img => { flyerImg = img; if (logoImg) renderPreview(); else showFlyerPreview(); });
+  loadImgFromSrc(f.b64, img => {
+    flyerImg = img;
+    if (logoImg) renderPreview(); else showFlyerPreview();
+  });
   renderFlyerSelector();
+  // Reset logo input so same file can be re-selected if needed
+  const logoInput = document.getElementById('logo-input');
+  if (logoInput) logoInput.value = '';
 }
 
 function selectAdminFlyer(idx) {
@@ -1537,7 +1550,7 @@ window._replaceFlyer = function(idx, input) {
   const fr = new FileReader();
   fr.onload = e => {
     const rawDataUrl = e.target.result;
-    compressImage(rawDataUrl, 900, 0.75, dataUrl => {
+    compressImage(rawDataUrl, 1200, 0.85, dataUrl => {
       flyers[idx].b64 = dataUrl;
       if (idx === adminFlyerIdx) {
         loadImgFromSrc(dataUrl, img => {
@@ -1583,7 +1596,7 @@ async function saveFlyersToFirebase() {
   try {
     // Comprimir todos los flyers antes de guardar
     const compressedFlyers = await Promise.all(flyers.map(f => new Promise(res => {
-      compressImage(f.b64, 900, 0.75, compressed => {
+      compressImage(f.b64, 1200, 0.85, compressed => {
         res({ ...f, b64: compressed });
       });
     })));
