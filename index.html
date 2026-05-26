@@ -743,7 +743,7 @@ footer{
 </main>
 
 <footer>
-  Esta herramienta se encuentra en fase de pruebas.
+  Esta herramienta se encuentra en fase de pruebas. · v1.6
 </footer>
 
 <script type="module">
@@ -959,6 +959,9 @@ function hasValidBackground(img) {
 
 // DROPS
 setupDrop('logo-drop', 'logo-input', (f, img) => {
+  // Ensure cfg is synced with the active flyer before rendering
+  const activeFlyer = getActiveFlyer();
+  if (activeFlyer) cfg = { px: activeFlyer.px, py: activeFlyer.py, lw: activeFlyer.lw, lh: activeFlyer.lh };
   const result = validateLogo(f, img);
   const okEl = document.getElementById('logo-ok');
   const allOk = result.format && result.size && result.bg;
@@ -1071,9 +1074,11 @@ document.getElementById('btn-save').addEventListener('click', async () => {
     await setDoc(doc(db, 'config', 'main'), saveData);
     btn.innerHTML = '✓ Publicado'; status.style.color = 'var(--green)';
     status.textContent = 'Los cambios ya están disponibles para todos.';
-    // Reload flyerImg with the compressed version
+    // Reload flyerImg with correct cfg from active flyer
     const activeF = getActiveFlyer();
     if (activeF) {
+      cfg = { px: activeF.px, py: activeF.py, lw: activeF.lw, lh: activeF.lh };
+      syncSlidersFromCfg();
       loadImgFromSrc(activeF.b64, img => {
         flyerImg = img;
         if (logoImg) renderPreview(); else showFlyerPreview();
