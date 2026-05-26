@@ -766,6 +766,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 let flyerImg = null, logoImg = null;
+let hqFlyerImg = null; // Alta resolución solo para descarga
 let cfg = { px: 0.880, py: 0.844, lw: LOGO_W, lh: LOGO_H };
 let adminUnlocked = false;
 let pendingFlyerDataUrl = null;
@@ -1008,11 +1009,14 @@ document.getElementById('flyer-input').addEventListener('change', function() {
       adminFlyerIdx = flyers.length - 1;
       cfg = { px: 0.880, py: 0.844, lw: 250, lh: 150 };
       syncSlidersFromCfg();
+      // Load compressed for display
       loadImgFromSrc(dataUrl, img => {
         flyerImg = img;
         renderAdmin();
         if (logoImg) renderPreview();
       });
+      // Load original for download
+      loadImgFromSrc(rawDataUrl, img => { hqFlyerImg = img; });
       document.getElementById('flyer-ok').style.display = 'block';
       document.getElementById('flyer-fname').textContent = f.name;
       renderFlyersGrid();
@@ -1095,7 +1099,7 @@ document.getElementById('btn-save').addEventListener('click', async () => {
 document.getElementById('btn-dl').addEventListener('click', async () => {
   if (!flyerImg || !logoImg) return;
   const tmp = document.createElement('canvas');
-  drawComposite(tmp, flyerImg, logoImg, cfg);
+  drawComposite(tmp, hqFlyerImg || flyerImg, logoImg, cfg);
   const resultB64 = tmp.toDataURL('image/png');
   const a = document.createElement('a'); a.download = 'flyer_con_logo.png'; a.href = resultB64; a.click();
   setStep(3);
@@ -1579,6 +1583,8 @@ window._replaceFlyer = function(idx, input) {
           renderAdmin();
           if (logoImg) renderPreview();
         });
+        // Keep original for download
+        loadImgFromSrc(rawDataUrl, img => { hqFlyerImg = img; });
       }
       renderFlyersGrid();
       renderFlyerSelector();
